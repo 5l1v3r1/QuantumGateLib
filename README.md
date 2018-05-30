@@ -1,7 +1,7 @@
 Quantum circuit library 
 ==============
 
-# Outline
+## Outline
 
 A Quantum circuit library written in C++.
 
