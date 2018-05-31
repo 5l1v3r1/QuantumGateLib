@@ -1,3 +1,4 @@
 build/*.o
 build/*.d
 build/prog
+*.old
