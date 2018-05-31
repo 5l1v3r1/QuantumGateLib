@@ -1,0 +1,25 @@
+#TODO
+
+量子回路の設計とsolverは切り離す。
+
+circuitライブラリ circuit directory
+	gateをstd::vectorで保持
+	最後にmeasureがあるかチェック
+	measureの後にgateが置かれてないかチェック
+	有効な回路かのcheck機構
+gateライブラリ gate directory
+	通常のゲートは定義する(H,S,T,X,Y,Z)
+	user-defined gate
+	control gate -> Control(gate class)
+measureライブラリ measure directory
+	測定結果に応じてユニタリーをかける操作 -> それはcontrol gateで置換できるのでいらない
+solverライブラリ solver directory
+	exactsolver
+	tensornetwork
+	cuda
+	quantum computer?
+		OpenQLと連携してqasmを出力させるとか？
+
+	solverをsimulatableとunsimulatable (造語)に分ける。
+	unsimulatableなんて言葉なくないか
+	unsimulatableのほうはsimulatableと違って途中の波動関数等の情報を見ることができない。測定結果しか取り出せない
