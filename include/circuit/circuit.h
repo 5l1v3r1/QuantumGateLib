@@ -20,6 +20,13 @@ namespace qlib{
 	};
 
 	/**
+	 * classical register
+	 */
+
+	struct cReg{
+	};
+
+	/**
 	 * Abstract components
 	 */
 
