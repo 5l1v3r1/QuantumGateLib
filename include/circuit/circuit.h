@@ -13,6 +13,7 @@
 #include <exception>
 #include <memory>
 #include <type_traits>
+#include "../default_strings.h"
 
 namespace qlib{
 
@@ -27,19 +28,6 @@ namespace qlib{
 	 */
 	template<class T>
 		using u_ptr = std::unique_ptr<T>;
-
-	/*
-	 * enum for representing flags of specific string
-	 */
-
-	enum DefaultString{
-		MEASURE,
-	};
-
-	//! default string of measurement
-	const static std::array<std::string, 1> default_str= {
-		"__default_measure_",
-	};
 
 	/**
 	 * print exception message
@@ -141,13 +129,13 @@ namespace qlib{
 			//! an identifier
 			std::string name;
 			/**
-			 * protected constructor of Component <br/>
-			 * only friend class can call this constructor.
+			 * protected constructor of Component
 			 * @param name identifier name
 			 */
 			Component(const std::string& name)
 				:name(name){
 				}
+
 	};
 
 
@@ -190,20 +178,22 @@ namespace qlib{
 			AbstUnitary(const std::string& name)
 				: Component(name){
 				}
+
+			//TODO: how to implement dagger?
 	};
 
 	/**
 	 * class for Unitary operator
-	 * @tparam Ngate number of gate
+	 * @tparam Nregister number of register 
 	 */
 
-	template<size_t Ngate>
+	template<size_t Nregister>
 		class UnitaryOp: public AbstUnitary{
 			protected:
 				//! array of pointer of QuantumRegister
-				const std::array<const QuantumRegister*, Ngate> p_qregs;
-				//! number of gates
-				const size_t num_gate = Ngate;
+				const std::array<const QuantumRegister*, Nregister> p_qregs;
+				//! number of registers
+				const size_t num_register = Nregister;
 
 				/**
 				 * protected constructor of UnitaryOp
@@ -221,28 +211,28 @@ namespace qlib{
 
 	/**
 	 * class for Unitary operator with parameters
-	 * @tparam Ngate number of gate
+	 * @tparam Nregister number of register
 	 * @tparam Nparam number of parameters
-	 * @tparam T the type of parameter (assumed to be double)
 	 */
 
-	template<size_t Ngate, size_t Nparam, typename T = double>
-		class UnitaryOpParam: public UnitaryOp<Ngate>{
+	template<size_t Nregister, size_t Nparam>
+		class UnitaryOpParam: public UnitaryOp<Nregister>{
 			protected:
 				//! list of parameters
-				const std::array<T, Nparam> params;
+				const std::array<double, Nparam> params;
 
 				/**
 				 * protected constructor of UnitaryOpParam
 				 * @param name identifier name
+				 * @param params double array of parameters
 				 * @param args list of the points of QuantumRegister
 				 * @tparam Args list of the types of args. Each type must be QuantumRegister
 				 */
 
 			public:
 				template<class... Args, typename = typename std::enable_if<all_same<Args...>::value, void>::type>
-					UnitaryOpParam(const std::string& name, const std::array<T, Nparam>& params, const Args&... args)
-					: UnitaryOp<Ngate>(name, args...), params(params){
+					UnitaryOpParam(const std::string& name, const std::array<double, Nparam>& params, const Args&... args)
+					: UnitaryOp<Nregister>(name, args...), params(params){
 					}
 		};
 
@@ -283,6 +273,7 @@ namespace qlib{
 	 */
 
 	//TODO: w/ flyweight pattern?
+	//TODO: how to apply rules for each unitary gates? (eg. X^2=I, CNOT*inv(CNOT)*CNOT=SWAP)
 
 	class Op{
 
@@ -302,16 +293,155 @@ namespace qlib{
 			/**
 			 * getter for UnitaryOp operator
 			 * @param name identifier name
-			 * @param args arguments of QuantumRegister*
+			 * @param args arguments of QuantumRegister
 			 * @tparam Args list of the types of arguments. Each type must be QuantumRegister
-			 * @tparam Ngate the number of arguments
+			 * @tparam Nregister the number of arguments
 			 * @return shared_ptr of UnitaryOp class
 			 */
 
-			template<class... Args, size_t Ngate = sizeof...(Args)>
-				inline static s_ptr<UnitaryOp<Ngate>> U(const std::string& name, const Args&... args){
-					return std::make_shared<UnitaryOp<Ngate>>(name, args...);
+			template<class... Args, size_t Nregister = sizeof...(Args)>
+				inline static s_ptr<UnitaryOp<Nregister>> U(const std::string& name, const Args&... args){
+					return std::make_shared<UnitaryOp<Nregister>>(name, args...);
 				}
+
+			/**
+			 * generate Id gate
+			 * @param qreg arguments of QuantumRegister
+			 * @return shared_ptr of Id operator
+			 */
+
+				inline static s_ptr<UnitaryOp<1>> Id(const QuantumRegister& qreg){
+					return Op::U(default_str[DefaultString::Id], qreg);
+				}
+
+			/**
+			 * generate X gate
+			 * @param qreg arguments of QuantumRegister
+			 * @return shared_ptr of X operator
+			 */
+
+				inline static s_ptr<UnitaryOp<1>> X(const QuantumRegister& qreg){
+					return Op::U(default_str[DefaultString::X], qreg);
+				}
+
+			/**
+			 * generate Y gate
+			 * @param registers arguments of QuantumRegister
+			 * @return shared_ptr of Y operator
+			 */
+
+				inline static s_ptr<UnitaryOp<1>> Y(const QuantumRegister& qreg){
+					return Op::U(default_str[DefaultString::Y], qreg);
+				}
+
+			/**
+			 * generate Z gate
+			 * @param qreg arguments of QuantumRegister
+			 * @return shared_ptr of Z operator
+			 */
+
+				inline static s_ptr<UnitaryOp<1>> Z(const QuantumRegister& qreg){
+					return Op::U(default_str[DefaultString::Z], qreg);
+				}
+
+			/**
+			 * generate H gate
+			 * @param qreg arguments of QuantumRegister
+			 * @return shared_ptr of H operator
+			 */
+
+				inline static s_ptr<UnitaryOp<1>> H(const QuantumRegister& qreg){
+					return Op::U(default_str[DefaultString::H], qreg);
+				}
+
+			/**
+			 * generate S gate
+			 * @param qreg arguments of QuantumRegister
+			 * @return shared_ptr of S operator
+			 */
+
+				inline static s_ptr<UnitaryOp<1>> S(const QuantumRegister& qreg){
+					return Op::U(default_str[DefaultString::S], qreg);
+				}
+
+			/**
+			 * generate T gate
+			 * @param qreg arguments of QuantumRegister
+			 * @return shared_ptr of T operator
+			 */
+
+				inline static s_ptr<UnitaryOp<1>> T(const QuantumRegister& qreg){
+					return Op::U(default_str[DefaultString::T], qreg);
+				}
+
+			/**
+			 * generate CNOT gate
+			 * @param control control qubit
+			 * @param target target qubit
+			 * @return shared_ptr of CNOT operator
+			 */
+
+				inline static s_ptr<UnitaryOp<2>> CNOT(const QuantumRegister& control, const QuantumRegister& target){
+					return Op::U(default_str[DefaultString::CNOT], control, target);
+				}
+
+			/**
+			 * generate SWAP gate
+			 * @param qreg1 qubit 1
+			 * @param qreg2 qubit 2
+			 * @return shared_ptr of SWAP operator
+			 */
+
+				inline static s_ptr<UnitaryOp<2>> SWAP(const QuantumRegister& qreg1, const QuantumRegister& qreg2){
+					return Op::U(default_str[DefaultString::SWAP], qreg1, qreg2);
+				}
+
+			/**
+			 * generate CZ gate
+			 * @param control control qubit
+			 * @param target target qubit
+			 * @return shared_ptr of CZ operator
+			 */
+
+				inline static s_ptr<UnitaryOp<2>> CZ(const QuantumRegister& control, const QuantumRegister& target){
+					return Op::U(default_str[DefaultString::CZ], control, target);
+				}
+
+			/**
+			 * generate CS gate
+			 * @param control control qubit
+			 * @param target target qubit
+			 * @return shared_ptr of CS operator
+			 */
+
+				inline static s_ptr<UnitaryOp<2>> CS(const QuantumRegister& control, const QuantumRegister& target){
+					return Op::U(default_str[DefaultString::CS], control, target);
+				}
+
+			/**
+			 * generate TOFFOLI gate
+			 * @param control1 control qubit 1
+			 * @param control2 control qubit 2
+			 * @param target target qubit
+			 * @return shared_ptr of TOFFOLI operator
+			 */
+
+				inline static s_ptr<UnitaryOp<3>> TOFFOLI(const QuantumRegister& control1, const QuantumRegister& control2, const QuantumRegister& target){
+					return Op::U(default_str[DefaultString::TOFFOLI], control1, control2, target);
+				}
+
+			/**
+			 * generate FREDKIN gate
+			 * @param control control qubit
+			 * @param target1 target qubit 1
+			 * @param target2 target qubit 2
+			 * @return shared_ptr of FREDKIN operator
+			 */
+
+				inline static s_ptr<UnitaryOp<3>> FREDKIN(const QuantumRegister& control, const QuantumRegister& target1, const QuantumRegister& target2){
+					return Op::U(default_str[DefaultString::FREDKIN], control, target1, target2);
+				}
+
 
 			/**
 			 * getter for UnitaryOpParam operator
@@ -324,9 +454,20 @@ namespace qlib{
 			 * @return shared_ptr of UnitaryOpParam class
 			 */
 
-			template<class... Args, size_t Nparam, typename T>
-				inline static s_ptr<UnitaryOpParam<sizeof...(Args), Nparam, T>> U(const std::string& name, const std::array<T, Nparam>& params, const Args&... args){
-					return std::make_shared<UnitaryOpParam<sizeof...(Args), Nparam, T>>(name, params, args...);
+			template<class... Args, size_t Nparam>
+				inline static s_ptr<UnitaryOpParam<sizeof...(Args), Nparam>> U(const std::string& name, const std::array<double, Nparam>& params, const Args&... args){
+					return std::make_shared<UnitaryOpParam<sizeof...(Args), Nparam>>(name, params, args...);
+				}
+
+			/**
+			 * generate R (phase-shift) gate with parameter
+			 * @param phi phase parameter
+			 * @param qreg arguments of QuantumRegister
+			 * @return shared_ptr of R operator
+			 */
+
+				inline static s_ptr<UnitaryOpParam<1, 1>> R(double phi, const QuantumRegister& qreg){
+					return Op::U(default_str[DefaultString::R], std::array<double,1>{phi}, qreg);
 				}
 
 			/**
@@ -352,9 +493,6 @@ namespace qlib{
 
 
 	};
-
-
-
 
 
 	/**
