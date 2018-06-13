@@ -13,7 +13,7 @@
 #include <exception>
 #include <memory>
 #include <type_traits>
-#include "../default_strings.h"
+#include "../default_parameters.h"
 
 namespace qlib{
 
@@ -33,7 +33,7 @@ namespace qlib{
 	 * print exception message
 	 * @param exception_name exception name
 	 * @param message additional exception message
-	 * @return decorated string
+	 * @return decorated string (exception message)
 	 */
 	const std::string exception_format(const std::string& exception_name, const std::string& message){
 		std::string retmsg = exception_name + " Exception: \n" + message;
@@ -121,13 +121,15 @@ namespace qlib{
 
 
 	/**
-	 * abstract Component
+	 * abstract Component placed in quantum circuit
 	 */
 
 	class Component{
 		protected:
 			//! an identifier
-			std::string name;
+			const std::string name;
+			//! component type
+			const ComponentType type;
 			/**
 			 * protected constructor of Component
 			 * @param name identifier name
@@ -145,6 +147,7 @@ namespace qlib{
 	 */
 
 	class Measure: public Component{
+		
 		protected:
 
 			//! pointer of QuantumRegister
@@ -153,16 +156,28 @@ namespace qlib{
 			const ClassicalRegister* p_creg;
 
 			/**
-			 * protected constructor of Measure
+			 * constructor of Measure
 			 * @param qreg QuntumRegister to be measured
 			 * @param creg corresponding ClassicalRegister
 			 */
 
+			Measure(const QuantumRegister& qreg, const ClassicalRegister& creg)
+				: Component(default_str[MEASURE]), type(ComponentType::MEASUREMENT), p_qreg(&qreg), p_creg(&creg){
+				}
+
 		public:
 
-			Measure(const QuantumRegister& qreg, const ClassicalRegister& creg)
-				: Component(default_str[MEASURE]), p_qreg(&qreg), p_creg(&creg){
-				}
+			/**
+			 * generate shared_ptr of Measure
+			 * @param qreg QuntumRegister to be measured
+			 * @param creg corresponding ClassicalRegister
+			 * @return shared_ptr of Measure
+			 */
+
+			inline static s_ptr<Measure> create(const QuantumRegister& qreg, const ClassicalRegister& creg){
+				return std::make_shared<Measure>(qreg, creg);
+			}
+
 	};
 
 	/**
@@ -171,15 +186,15 @@ namespace qlib{
 
 	class AbstUnitary : public Component{
 		protected:
+
 			/**
-			 * protected constructor of AbstUnitary
+			 * constructor of AbstUnitary
 			 * @param name identifier name
 			 */
 			AbstUnitary(const std::string& name)
 				: Component(name){
 				}
 
-			//TODO: how to implement dagger?
 	};
 
 	/**
@@ -196,17 +211,32 @@ namespace qlib{
 				const size_t num_register = Nregister;
 
 				/**
-				 * protected constructor of UnitaryOp
+				 * constructor of UnitaryOp
 				 * @param name identifier name
 				 * @param args list of the points of QuantumRegister
 				 * @tparam Args list of the types of args. Each type must be QuantumRegister
 				 */
 
-			public:
 				template<class... Args, typename = typename std::enable_if<all_same<Args...>::value, void>::type>
 					UnitaryOp(const std::string& name, const Args&... args)
 					: AbstUnitary(name), p_qregs({&args...}){
 					}
+
+			public:
+
+				/**
+				 * generate shared_ptr of UnitaryOp
+				 * @param name identifier name
+				 * @param args list of the points of QuantumRegister
+				 * @tparam Args list of the types of args. Each type must be QuantumRegister
+				 * @return shared_ptr of UnitaryOp
+				 */
+
+				template<class... Args>
+					inline static s_ptr<UnitaryOp<Nregister>> create(const std::string& name, const Args&... args){
+						return std::make_shared<UnitaryOp<Nregister>>(name, args...);
+					}
+
 		};
 
 	/**
@@ -229,11 +259,17 @@ namespace qlib{
 				 * @tparam Args list of the types of args. Each type must be QuantumRegister
 				 */
 
-			public:
 				template<class... Args, typename = typename std::enable_if<all_same<Args...>::value, void>::type>
 					UnitaryOpParam(const std::string& name, const std::array<double, Nparam>& params, const Args&... args)
 					: UnitaryOp<Nregister>(name, args...), params(params){
 					}
+
+			public:
+
+				/**
+				 * generate shared_ptr of UnitaryOpParam
+				 */
+
 		};
 
 
@@ -310,9 +346,9 @@ namespace qlib{
 			 * @return shared_ptr of Id operator
 			 */
 
-				inline static s_ptr<UnitaryOp<1>> Id(const QuantumRegister& qreg){
-					return Op::U(default_str[DefaultString::Id], qreg);
-				}
+			inline static s_ptr<UnitaryOp<1>> Id(const QuantumRegister& qreg){
+				return Op::U(default_str[DefaultString::Id], qreg);
+			}
 
 			/**
 			 * generate X gate
@@ -320,9 +356,9 @@ namespace qlib{
 			 * @return shared_ptr of X operator
 			 */
 
-				inline static s_ptr<UnitaryOp<1>> X(const QuantumRegister& qreg){
-					return Op::U(default_str[DefaultString::X], qreg);
-				}
+			inline static s_ptr<UnitaryOp<1>> X(const QuantumRegister& qreg){
+				return Op::U(default_str[DefaultString::X], qreg);
+			}
 
 			/**
 			 * generate Y gate
@@ -330,9 +366,9 @@ namespace qlib{
 			 * @return shared_ptr of Y operator
 			 */
 
-				inline static s_ptr<UnitaryOp<1>> Y(const QuantumRegister& qreg){
-					return Op::U(default_str[DefaultString::Y], qreg);
-				}
+			inline static s_ptr<UnitaryOp<1>> Y(const QuantumRegister& qreg){
+				return Op::U(default_str[DefaultString::Y], qreg);
+			}
 
 			/**
 			 * generate Z gate
@@ -340,9 +376,9 @@ namespace qlib{
 			 * @return shared_ptr of Z operator
 			 */
 
-				inline static s_ptr<UnitaryOp<1>> Z(const QuantumRegister& qreg){
-					return Op::U(default_str[DefaultString::Z], qreg);
-				}
+			inline static s_ptr<UnitaryOp<1>> Z(const QuantumRegister& qreg){
+				return Op::U(default_str[DefaultString::Z], qreg);
+			}
 
 			/**
 			 * generate H gate
@@ -350,9 +386,9 @@ namespace qlib{
 			 * @return shared_ptr of H operator
 			 */
 
-				inline static s_ptr<UnitaryOp<1>> H(const QuantumRegister& qreg){
-					return Op::U(default_str[DefaultString::H], qreg);
-				}
+			inline static s_ptr<UnitaryOp<1>> H(const QuantumRegister& qreg){
+				return Op::U(default_str[DefaultString::H], qreg);
+			}
 
 			/**
 			 * generate S gate
@@ -360,9 +396,9 @@ namespace qlib{
 			 * @return shared_ptr of S operator
 			 */
 
-				inline static s_ptr<UnitaryOp<1>> S(const QuantumRegister& qreg){
-					return Op::U(default_str[DefaultString::S], qreg);
-				}
+			inline static s_ptr<UnitaryOp<1>> S(const QuantumRegister& qreg){
+				return Op::U(default_str[DefaultString::S], qreg);
+			}
 
 			/**
 			 * generate T gate
@@ -370,9 +406,9 @@ namespace qlib{
 			 * @return shared_ptr of T operator
 			 */
 
-				inline static s_ptr<UnitaryOp<1>> T(const QuantumRegister& qreg){
-					return Op::U(default_str[DefaultString::T], qreg);
-				}
+			inline static s_ptr<UnitaryOp<1>> T(const QuantumRegister& qreg){
+				return Op::U(default_str[DefaultString::T], qreg);
+			}
 
 			/**
 			 * generate CNOT gate
@@ -381,9 +417,9 @@ namespace qlib{
 			 * @return shared_ptr of CNOT operator
 			 */
 
-				inline static s_ptr<UnitaryOp<2>> CNOT(const QuantumRegister& control, const QuantumRegister& target){
-					return Op::U(default_str[DefaultString::CNOT], control, target);
-				}
+			inline static s_ptr<UnitaryOp<2>> CNOT(const QuantumRegister& control, const QuantumRegister& target){
+				return Op::U(default_str[DefaultString::CNOT], control, target);
+			}
 
 			/**
 			 * generate SWAP gate
@@ -392,9 +428,9 @@ namespace qlib{
 			 * @return shared_ptr of SWAP operator
 			 */
 
-				inline static s_ptr<UnitaryOp<2>> SWAP(const QuantumRegister& qreg1, const QuantumRegister& qreg2){
-					return Op::U(default_str[DefaultString::SWAP], qreg1, qreg2);
-				}
+			inline static s_ptr<UnitaryOp<2>> SWAP(const QuantumRegister& qreg1, const QuantumRegister& qreg2){
+				return Op::U(default_str[DefaultString::SWAP], qreg1, qreg2);
+			}
 
 			/**
 			 * generate CZ gate
@@ -403,9 +439,9 @@ namespace qlib{
 			 * @return shared_ptr of CZ operator
 			 */
 
-				inline static s_ptr<UnitaryOp<2>> CZ(const QuantumRegister& control, const QuantumRegister& target){
-					return Op::U(default_str[DefaultString::CZ], control, target);
-				}
+			inline static s_ptr<UnitaryOp<2>> CZ(const QuantumRegister& control, const QuantumRegister& target){
+				return Op::U(default_str[DefaultString::CZ], control, target);
+			}
 
 			/**
 			 * generate CS gate
@@ -414,9 +450,9 @@ namespace qlib{
 			 * @return shared_ptr of CS operator
 			 */
 
-				inline static s_ptr<UnitaryOp<2>> CS(const QuantumRegister& control, const QuantumRegister& target){
-					return Op::U(default_str[DefaultString::CS], control, target);
-				}
+			inline static s_ptr<UnitaryOp<2>> CS(const QuantumRegister& control, const QuantumRegister& target){
+				return Op::U(default_str[DefaultString::CS], control, target);
+			}
 
 			/**
 			 * generate TOFFOLI gate
@@ -426,9 +462,9 @@ namespace qlib{
 			 * @return shared_ptr of TOFFOLI operator
 			 */
 
-				inline static s_ptr<UnitaryOp<3>> TOFFOLI(const QuantumRegister& control1, const QuantumRegister& control2, const QuantumRegister& target){
-					return Op::U(default_str[DefaultString::TOFFOLI], control1, control2, target);
-				}
+			inline static s_ptr<UnitaryOp<3>> TOFFOLI(const QuantumRegister& control1, const QuantumRegister& control2, const QuantumRegister& target){
+				return Op::U(default_str[DefaultString::TOFFOLI], control1, control2, target);
+			}
 
 			/**
 			 * generate FREDKIN gate
@@ -438,9 +474,9 @@ namespace qlib{
 			 * @return shared_ptr of FREDKIN operator
 			 */
 
-				inline static s_ptr<UnitaryOp<3>> FREDKIN(const QuantumRegister& control, const QuantumRegister& target1, const QuantumRegister& target2){
-					return Op::U(default_str[DefaultString::FREDKIN], control, target1, target2);
-				}
+			inline static s_ptr<UnitaryOp<3>> FREDKIN(const QuantumRegister& control, const QuantumRegister& target1, const QuantumRegister& target2){
+				return Op::U(default_str[DefaultString::FREDKIN], control, target1, target2);
+			}
 
 
 			/**
@@ -466,9 +502,9 @@ namespace qlib{
 			 * @return shared_ptr of R operator
 			 */
 
-				inline static s_ptr<UnitaryOpParam<1, 1>> R(double phi, const QuantumRegister& qreg){
-					return Op::U(default_str[DefaultString::R], std::array<double,1>{phi}, qreg);
-				}
+			inline static s_ptr<UnitaryOpParam<1, 1>> R(double phi, const QuantumRegister& qreg){
+				return Op::U(default_str[DefaultString::R], std::array<double,1>{phi}, qreg);
+			}
 
 			/**
 			 * getter for UnitaryContainer operator

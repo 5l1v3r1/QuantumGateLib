@@ -1,6 +1,6 @@
 /**
- * @file default_strings.h
- * @brief default strings which represent quantum components
+ * @file default_parameters
+ * @brief default parameters
  * @author Kohji Nishimura
  * @date 2018/06/12
  *
@@ -51,6 +51,7 @@ namespace qlib{
 		NUMSTR,
 	};
 
+	//TODO: separate the declaration and the definition (to prevent multiple definitions)
 	//! default string of measurement
 	const static std::array<std::string, DefaultString::NUMSTR> default_str= {
 		"__default_measure_",
@@ -68,5 +69,21 @@ namespace qlib{
 		"__default_cs_",
 		"__default_toffoli_",
 		"__default_fredkin_",
+	};
+
+	/**
+	 * enum for representing component types
+	 */
+	enum ComponentType{
+		//! undefined
+		UNDEFINED,
+		//! measurement
+		MEASUREMENT,
+		//! single unitary operator
+		UNITARY_OP,
+		//! single unitary operator with parameters
+		UNITARY_OP_PARAM,
+		//! unitary container
+		UNITARY_CONTAINER,
 	};
 }
