@@ -12,17 +12,26 @@ int main(void) {
 	f(meas);
 	auto H = Op::H(qreg[0]);
 	f(H);
-	auto Id = Op::Id(qreg[2]);
+	auto Id = Op::Id(qreg[1]);
 	f(Id);
-	const std::array<double,1> t = {3.65};
-	auto R = Op::U("__default_Rotate_", t, qreg[2], qreg[0]);
+	auto R = Op::R(3.14, qreg[2]);
 	f(R);
-	auto R2 = Op::R(3.14, qreg[1]);
+	auto R2 = Op::U("rth", qreg[0], qreg[0]);
 	f(R2);
-	auto U_module = Op::Us("__default_Module");
+	auto R3 = Op::U("rth", qreg[1], qreg[1], qreg[1], qreg[1], qreg[1], qreg[1], qreg[1]);
+	f(R3);
+	auto R4 = Op::U("rth", std::array<double,3>{1,1,1}, qreg[1], qreg[1], qreg[1]);
+	f(R4);
+	auto F2 = Op::FREDKIN(qreg[2], qreg[1], qreg[0]);
+	f(F2);
+	auto U_module = Op::Us("__default_Module", {Id});
 	f(U_module);
 	auto U_module2 = Op::Us("__default_Module", {H, R, U_module});
 	f(U_module2);
+	auto P = UnitaryOp<1, 0>::create("hoge", qreg[0]);
+	f(P);
+	auto P2 = UnitaryOp<1, 1>::create("hoge", std::array<double, 1>{2}, qreg[0]);
+	f(P2);
 	return 0;
 }
      
