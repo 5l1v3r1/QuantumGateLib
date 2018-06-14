@@ -7,6 +7,7 @@
  */
 
 #pragma once
+#include <list>
 #include <vector>
 #include <array>
 #include <string>
@@ -17,17 +18,20 @@
 
 namespace qlib{
 
+#if 1
+
 	/** abbrebiation of std::shared_ptr
 	 * @tparam T the type for shared_ptr
 	 */
 	template<class T>
-		using s_ptr = std::shared_ptr<T>;
-
+		using _ptr = std::shared_ptr<T>;
+#else
 	/** abbrebiation of std::unique_ptr
 	 * @tparam T the type for unique_ptr
 	 */
 	template<class T>
-		using u_ptr = std::unique_ptr<T>;
+		using _ptr = std::unique_ptr<T>;
+#endif
 
 	/**
 	 * print exception message
@@ -35,7 +39,7 @@ namespace qlib{
 	 * @param message additional exception message
 	 * @return decorated string (exception message)
 	 */
-	const std::string exception_format(const std::string& exception_name, const std::string& message){
+	inline const std::string exception_format(const std::string& exception_name, const std::string& message){
 		std::string retmsg = exception_name + " Exception: \n" + message;
 		return retmsg;
 	}
@@ -116,6 +120,12 @@ namespace qlib{
 		//TODO: register num?
 	};
 
+	//! dummy qubit
+	extern const QuantumRegister null_qreg;
+	//! dummy bit
+	extern const ClassicalRegister null_creg;
+
+
 
 	/**************************************************/
 
@@ -149,7 +159,7 @@ namespace qlib{
 
 	class Measure: public Component{
 
-		protected:
+		private:
 
 			//! pointer of QuantumRegister
 			const QuantumRegister* p_qreg;
@@ -175,7 +185,7 @@ namespace qlib{
 			 * @return shared_ptr of Measure
 			 */
 
-			inline static s_ptr<Measure> create(const QuantumRegister& qreg, const ClassicalRegister& creg){
+			inline static _ptr<Measure> create(const QuantumRegister& qreg, const ClassicalRegister& creg){
 				struct impl: Measure{
 					impl(const QuantumRegister& qreg, const ClassicalRegister& creg)
 						: Measure(qreg, creg){}
@@ -212,7 +222,7 @@ namespace qlib{
 
 	template<size_t Nregister, size_t Nparam, typename = typename std::enable_if<Nregister != 0, void>::type>
 		class UnitaryOp: public AbstUnitary{
-			protected:
+			private:
 				//! array of pointer of QuantumRegister
 				const std::array<const QuantumRegister*, Nregister> p_qregs;
 				//! number of registers
@@ -245,7 +255,7 @@ namespace qlib{
 				 */
 
 				template<class... Args>
-					inline static s_ptr<UnitaryOp<Nregister, Nparam>> create(const std::string& name, const std::array<double, Nparam>& params, const Args&... args){
+					inline static _ptr<UnitaryOp<Nregister, Nparam>> create(const std::string& name, const std::array<double, Nparam>& params, const Args&... args){
 						struct impl : UnitaryOp<Nregister, Nparam>{
 							impl(const std::string& name, const std::array<double, Nparam>& params, const Args&... args) : UnitaryOp<Nregister, Nparam>(name, params, args...){}
 						};
@@ -261,7 +271,7 @@ namespace qlib{
 
 	template<size_t Nregister>
 		class UnitaryOp<Nregister, 0> : public AbstUnitary{
-			protected:
+			private:
 				//! array of pointer of QuantumRegister
 				const std::array<const QuantumRegister*, Nregister> p_qregs;
 				//! number of registers
@@ -290,7 +300,7 @@ namespace qlib{
 				 */
 
 				template<class... Args>
-					inline static s_ptr<UnitaryOp<Nregister, 0>> create(const std::string& name, const Args&... args){
+					inline static _ptr<UnitaryOp<Nregister, 0>> create(const std::string& name, const Args&... args){
 						struct impl : UnitaryOp<Nregister, 0>{
 							impl(const std::string& name, const Args&... args) : UnitaryOp<Nregister, 0>(name, args...){}
 						};
@@ -303,9 +313,9 @@ namespace qlib{
 	 * class for Unitary container
 	 */
 	class UnitaryContainer: public AbstUnitary{
-		protected:
+		private:
 			//! list of unitaries this class holds
-			const std::vector<s_ptr<AbstUnitary>> unitaries;
+			const std::list<_ptr<AbstUnitary>> unitaries;
 
 			/**
 			 * constructor of UnitaryContainer
@@ -313,7 +323,7 @@ namespace qlib{
 			 * @param unitaries list of unitary operators
 			 */
 
-			UnitaryContainer(const std::string& name, const std::vector<s_ptr<AbstUnitary>>& unitaries)
+			UnitaryContainer(const std::string& name, const std::list<_ptr<AbstUnitary>>& unitaries)
 				:AbstUnitary(name, ComponentType::UNITARY_CONTAINER), unitaries(unitaries){
 				}
 
@@ -326,9 +336,9 @@ namespace qlib{
 			 * @return shared_ptr of UnitaryOp
 			 */
 
-			inline static s_ptr<UnitaryContainer> create(const std::string& name, const std::vector<s_ptr<AbstUnitary>>& unitaries){
+			inline static _ptr<UnitaryContainer> create(const std::string& name, const std::list<_ptr<AbstUnitary>>& unitaries){
 				struct impl : UnitaryContainer{
-					impl(const std::string& name, const std::vector<s_ptr<AbstUnitary>>& unitaries) : UnitaryContainer(name, unitaries){}
+					impl(const std::string& name, const std::list<_ptr<AbstUnitary>>& unitaries) : UnitaryContainer(name, unitaries){}
 				};
 				return std::make_shared<impl>(name, unitaries);
 			}
@@ -353,7 +363,7 @@ namespace qlib{
 			 * @return shared_ptr of Measure class
 			 */
 
-			inline static s_ptr<Measure> Measurement(const QuantumRegister& qreg, const ClassicalRegister& creg){
+			inline static _ptr<Measure> Measurement(const QuantumRegister& qreg, const ClassicalRegister& creg){
 				return Measure::create(qreg, creg);
 			}
 
@@ -367,7 +377,7 @@ namespace qlib{
 			 */
 
 			template<class... Args, size_t Nregister = sizeof...(Args), typename = typename std::enable_if<all_same<Args...>::value, void>::type>
-				inline static s_ptr<UnitaryOp<Nregister, 0>> U(const std::string& name, const Args&... args){
+				inline static _ptr<UnitaryOp<Nregister, 0>> U(const std::string& name, const Args&... args){
 					return UnitaryOp<Nregister, 0>::create(name, args...);
 				}
 
@@ -377,7 +387,7 @@ namespace qlib{
 			 * @return shared_ptr of Id operator
 			 */
 
-			inline static s_ptr<UnitaryOp<1, 0>> Id(const QuantumRegister& qreg){
+			inline static _ptr<UnitaryOp<1, 0>> Id(const QuantumRegister& qreg){
 				return Op::U(default_str[DefaultString::Id], qreg);
 			}
 
@@ -387,7 +397,7 @@ namespace qlib{
 			 * @return shared_ptr of X operator
 			 */
 
-			inline static s_ptr<UnitaryOp<1, 0>> X(const QuantumRegister& qreg){
+			inline static _ptr<UnitaryOp<1, 0>> X(const QuantumRegister& qreg){
 				return Op::U(default_str[DefaultString::X], qreg);
 			}
 
@@ -397,7 +407,7 @@ namespace qlib{
 			 * @return shared_ptr of Y operator
 			 */
 
-			inline static s_ptr<UnitaryOp<1, 0>> Y(const QuantumRegister& qreg){
+			inline static _ptr<UnitaryOp<1, 0>> Y(const QuantumRegister& qreg){
 				return Op::U(default_str[DefaultString::Y], qreg);
 			}
 
@@ -407,7 +417,7 @@ namespace qlib{
 			 * @return shared_ptr of Z operator
 			 */
 
-			inline static s_ptr<UnitaryOp<1, 0>> Z(const QuantumRegister& qreg){
+			inline static _ptr<UnitaryOp<1, 0>> Z(const QuantumRegister& qreg){
 				return Op::U(default_str[DefaultString::Z], qreg);
 			}
 
@@ -417,7 +427,7 @@ namespace qlib{
 			 * @return shared_ptr of H operator
 			 */
 
-			inline static s_ptr<UnitaryOp<1, 0>> H(const QuantumRegister& qreg){
+			inline static _ptr<UnitaryOp<1, 0>> H(const QuantumRegister& qreg){
 				return Op::U(default_str[DefaultString::H], qreg);
 			}
 
@@ -427,7 +437,7 @@ namespace qlib{
 			 * @return shared_ptr of S operator
 			 */
 
-			inline static s_ptr<UnitaryOp<1, 0>> S(const QuantumRegister& qreg){
+			inline static _ptr<UnitaryOp<1, 0>> S(const QuantumRegister& qreg){
 				return Op::U(default_str[DefaultString::S], qreg);
 			}
 
@@ -437,7 +447,7 @@ namespace qlib{
 			 * @return shared_ptr of T operator
 			 */
 
-			inline static s_ptr<UnitaryOp<1, 0>> T(const QuantumRegister& qreg){
+			inline static _ptr<UnitaryOp<1, 0>> T(const QuantumRegister& qreg){
 				return Op::U(default_str[DefaultString::T], qreg);
 			}
 
@@ -448,7 +458,7 @@ namespace qlib{
 			 * @return shared_ptr of CNOT operator
 			 */
 
-			inline static s_ptr<UnitaryOp<2, 0>> CNOT(const QuantumRegister& control, const QuantumRegister& target){
+			inline static _ptr<UnitaryOp<2, 0>> CNOT(const QuantumRegister& control, const QuantumRegister& target){
 				return Op::U(default_str[DefaultString::CNOT], control, target);
 			}
 
@@ -459,7 +469,7 @@ namespace qlib{
 			 * @return shared_ptr of SWAP operator
 			 */
 
-			inline static s_ptr<UnitaryOp<2, 0>> SWAP(const QuantumRegister& qreg1, const QuantumRegister& qreg2){
+			inline static _ptr<UnitaryOp<2, 0>> SWAP(const QuantumRegister& qreg1, const QuantumRegister& qreg2){
 				return Op::U(default_str[DefaultString::SWAP], qreg1, qreg2);
 			}
 
@@ -470,7 +480,7 @@ namespace qlib{
 			 * @return shared_ptr of CZ operator
 			 */
 
-			inline static s_ptr<UnitaryOp<2, 0>> CZ(const QuantumRegister& control, const QuantumRegister& target){
+			inline static _ptr<UnitaryOp<2, 0>> CZ(const QuantumRegister& control, const QuantumRegister& target){
 				return Op::U(default_str[DefaultString::CZ], control, target);
 			}
 
@@ -481,7 +491,7 @@ namespace qlib{
 			 * @return shared_ptr of CS operator
 			 */
 
-			inline static s_ptr<UnitaryOp<2, 0>> CS(const QuantumRegister& control, const QuantumRegister& target){
+			inline static _ptr<UnitaryOp<2, 0>> CS(const QuantumRegister& control, const QuantumRegister& target){
 				return Op::U(default_str[DefaultString::CS], control, target);
 			}
 
@@ -493,7 +503,7 @@ namespace qlib{
 			 * @return shared_ptr of TOFFOLI operator
 			 */
 
-			inline static s_ptr<UnitaryOp<3, 0>> TOFFOLI(const QuantumRegister& control1, const QuantumRegister& control2, const QuantumRegister& target){
+			inline static _ptr<UnitaryOp<3, 0>> TOFFOLI(const QuantumRegister& control1, const QuantumRegister& control2, const QuantumRegister& target){
 				return Op::U(default_str[DefaultString::TOFFOLI], control1, control2, target);
 			}
 
@@ -505,7 +515,7 @@ namespace qlib{
 			 * @return shared_ptr of FREDKIN operator
 			 */
 
-			inline static s_ptr<UnitaryOp<3, 0>> FREDKIN(const QuantumRegister& control, const QuantumRegister& target1, const QuantumRegister& target2){
+			inline static _ptr<UnitaryOp<3, 0>> FREDKIN(const QuantumRegister& control, const QuantumRegister& target1, const QuantumRegister& target2){
 				return Op::U(default_str[DefaultString::FREDKIN], control, target1, target2);
 			}
 
@@ -522,7 +532,7 @@ namespace qlib{
 			 */
 
 			template<class... Args, size_t Nparam, typename = typename std::enable_if<Nparam != 0 && all_same<Args...>::value, void>::type>
-				inline static s_ptr<UnitaryOp<sizeof...(Args), Nparam>> U(const std::string& name, const std::array<double, Nparam>& params, const Args&... args){
+				inline static _ptr<UnitaryOp<sizeof...(Args), Nparam>> U(const std::string& name, const std::array<double, Nparam>& params, const Args&... args){
 					return UnitaryOp<sizeof...(Args), Nparam>::create(name, params, args...);
 				}
 
@@ -533,7 +543,7 @@ namespace qlib{
 			 * @return shared_ptr of R operator
 			 */
 
-			inline static s_ptr<UnitaryOp<1, 1>> R(double phi, const QuantumRegister& qreg){
+			inline static _ptr<UnitaryOp<1, 1>> R(double phi, const QuantumRegister& qreg){
 				return Op::U(default_str[DefaultString::R], std::array<double,1>{phi}, qreg);
 			}
 
@@ -544,11 +554,21 @@ namespace qlib{
 			 * @return shared_ptr of UnitaryContainer class
 			 */
 
-			inline static s_ptr<UnitaryContainer> Us(const std::string& name, const std::vector<s_ptr<AbstUnitary>>& unitaries){
+			inline static _ptr<UnitaryContainer> Us(const std::string& name, const std::list<_ptr<AbstUnitary>>& unitaries){
 				return UnitaryContainer::create(name, unitaries);
 			}
 
 
+	};
+
+	/**
+	 * class for managing constraint and optimization rules of quantum circuit
+	 */
+
+	class Rule{
+		private:
+			//! list of dagger_pairs (will be used by dagger() in UnitaryOp and UnitaryContainer)
+			static std::vector<std::pair<_ptr<AbstUnitary>, _ptr<AbstUnitary>>> dagger_pairs;
 	};
 
 

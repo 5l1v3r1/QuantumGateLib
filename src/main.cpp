@@ -24,7 +24,7 @@ int main(void) {
 	f(R4);
 	auto F2 = Op::FREDKIN(qreg[2], qreg[1], qreg[0]);
 	f(F2);
-	auto U_module = Op::Us("__default_Module", {Id});
+	auto U_module = Op::Us("__default_Module",{Op::CZ(qreg[0], qreg[2])});
 	f(U_module);
 	auto U_module2 = Op::Us("__default_Module", {H, R, U_module});
 	f(U_module2);
