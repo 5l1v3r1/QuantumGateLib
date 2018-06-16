@@ -43,6 +43,8 @@ namespace qlib{
 		CZ,
 		//! controlled-S
 		CS,
+		//! controlled-R
+		CR,
 		//! toffoli gate
 		TOFFOLI,
 		//! fredkin gate (controlled-SWAP)

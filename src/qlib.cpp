@@ -8,6 +8,7 @@
 
 #include "../include/default_parameters.h"
 #include "../include/circuit/circuit.h"
+#include <cmath>
 
 namespace qlib {
 	//! default string of measurement
@@ -25,18 +26,30 @@ namespace qlib {
 		"__default_swap_",
 		"__default_cz_",
 		"__default_cs_",
+		"__default_cr_",
 		"__default_toffoli_",
 		"__default_fredkin_",
 	};
 
 	//! dummy qubit
-	const QuantumRegister null_qreg;
+	DummyQuantumRegister null_qreg;
 	//! dummy bit
-	const ClassicalRegister null_creg;
+	DummyClassicalRegister null_creg;
 
-	//! list of dagger_pairs (will be used by dagger() in UnitaryOp and UnitaryContainer)
+	//! list of dagger pairs (will be used by dagger() function in UnitaryOp and UnitaryContainer)
 	std::vector<std::pair<_ptr<AbstUnitary>, _ptr<AbstUnitary>>> Rule::dagger_pairs = {
-		std::make_pair<_ptr<AbstUnitary>, _ptr<AbstUnitary>>(Op::X(null_qreg), Op::X(null_qreg)),
+		std::make_pair(Op::X(null_qreg[0]),Op::X(null_qreg[0])),
+		std::make_pair(Op::Y(null_qreg[0]),Op::Y(null_qreg[0])),
+		std::make_pair(Op::Z(null_qreg[0]),Op::Z(null_qreg[0])),
+		std::make_pair(Op::H(null_qreg[0]),Op::H(null_qreg[0])),
+		std::make_pair(Op::S(null_qreg[0]),Op::R(-M_PI/2., null_qreg[0])),
+		std::make_pair(Op::T(null_qreg[0]),Op::R(-M_PI/4., null_qreg[0])),
+		std::make_pair(Op::CNOT(null_qreg[0], null_qreg[1]),Op::CNOT(null_qreg[0], null_qreg[1])),
+		std::make_pair(Op::SWAP(null_qreg[0], null_qreg[1]),Op::SWAP(null_qreg[0], null_qreg[1])),
+		std::make_pair(Op::CZ(null_qreg[0], null_qreg[1]),Op::CZ(null_qreg[0], null_qreg[1])),
+		std::make_pair(Op::CS(null_qreg[0], null_qreg[1]),Op::CR(-M_PI/2., null_qreg[0], null_qreg[1])),
+		std::make_pair(Op::TOFFOLI(null_qreg[0], null_qreg[1], null_qreg[2]), Op::TOFFOLI(null_qreg[0], null_qreg[1], null_qreg[2])),
+		std::make_pair(Op::FREDKIN(null_qreg[0], null_qreg[1], null_qreg[2]), Op::FREDKIN(null_qreg[0], null_qreg[1], null_qreg[2])),
 	};
 
 } 

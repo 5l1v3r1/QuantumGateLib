@@ -9,15 +9,25 @@
 #pragma once
 #include <list>
 #include <vector>
+#include <algorithm>
 #include <array>
 #include <string>
 #include <exception>
 #include <memory>
 #include <type_traits>
+#include <inttypes.h>
 #include "../default_parameters.h"
+
+#include <iostream>
+#include <cmath>
+#include <limits>
 
 namespace qlib{
 
+	//TODO: which is better, shared_ptr or unique_ptr ? 
+	//TODO: shared_ptr -> copyable, all members in the class must be const to avoid bugs.
+	//TODO: unique_ptr -> uncopyable (movable), all members in the class need not to be const.
+	
 #if 1
 
 	/** abbrebiation of std::shared_ptr
@@ -105,6 +115,25 @@ namespace qlib{
 		struct all_same<T, T, Ts...> : all_same<T, Ts...> { };
 
 	/**
+	 * class for type_traits (first_type (remove_cvref))
+	 * @tparam T templeate parameter
+	 * @tparam Ts templeate parameters
+	 */
+
+	template<typename T, typename... Ts>
+		struct first_type_remove_cvref { using type = typename std::remove_cv<typename std::remove_reference<T>::type>::type;};
+
+	/**
+	 * check if two double variables are nealy the same
+	 * @param a double value
+	 * @param b double value
+	 * @return check if a and b are nealy the same
+	 */
+	inline bool near_same(double a, double b){
+		return std::abs(a-b) < std::numeric_limits<double>::epsilon();
+	}
+
+	/**
 	 * quantum register
 	 */
 
@@ -120,14 +149,81 @@ namespace qlib{
 		//TODO: register num?
 	};
 
+	/**
+	 * dummy quantum register
+	 */
+
+	class DummyQuantumRegister{
+		private:
+			//! list of dummy quantum register
+			std::vector<QuantumRegister> dummy_register;
+
+			/**
+			 * constructor of dummy quantum register
+			 * @param pointer the value to be set to dummy_pointer
+			 */
+
+		public:
+			DummyQuantumRegister(){}
+
+			/**
+			 * return object itself with dummy_pointer changed to index value
+			 * @param index index value
+			 * @return object itself with dummy_pointer changed to index value
+			 */
+			const QuantumRegister& operator[](size_t index){
+				if(index >= dummy_register.size()){
+					//resize dummy_register
+					dummy_register.resize(index+1);
+				}
+				return dummy_register[index];
+			}
+	};
+
+	/**
+	 * dummy classical register
+	 */
+
+	struct DummyClassicalRegister{
+		private:
+			//! list of dummy classical register
+			std::vector<ClassicalRegister> dummy_register;
+
+			/**
+			 * constructor of dummy classical register
+			 * @param pointer the value to be set to dummy_pointer
+			 */
+
+		public:
+			DummyClassicalRegister(){}
+
+			/**
+			 * return object itself with dummy_pointer changed to index value
+			 * @param index index value
+			 * @return object itself with dummy_pointer changed to index value
+			 */
+			const ClassicalRegister& operator[](size_t index){
+				if(index >= dummy_register.size()){
+					//resize dummy_register
+					dummy_register.resize(index+1);
+				}
+				return dummy_register[index];
+			}
+	};
+
 	//! dummy qubit
-	extern const QuantumRegister null_qreg;
+	extern DummyQuantumRegister null_qreg;
 	//! dummy bit
-	extern const ClassicalRegister null_creg;
+	extern DummyClassicalRegister null_creg;
 
 
 
 	/**************************************************/
+
+	//! forward declaration
+	class Component;
+	//! forward declaration
+	class AbstUnitary;
 
 
 	/**
@@ -148,6 +244,27 @@ namespace qlib{
 			Component(const std::string& name, const ComponentType type)
 				:name(name), type(type){
 				}
+
+		public:
+			/**
+			 * get identifier
+			 * @return identifier name
+			 */
+
+			const std::string getName() const{
+				return name;
+			}
+
+			/**
+			 * get component type
+			 * @return component type
+			 */
+
+			ComponentType getType() const{
+				return type;
+			}
+
+
 
 	};
 
@@ -194,6 +311,23 @@ namespace qlib{
 				return std::make_shared<impl>(qreg, creg);
 			}
 
+			/**
+			 * get quantum register
+			 * @return QuantumRegister* variable
+			 */
+
+			const QuantumRegister* getQuantumRegister() const noexcept{
+				return p_qreg;
+			}
+
+			/**
+			 * get classical register
+			 * @return QuantumRegister* variable
+			 */
+
+			const ClassicalRegister* getClassicalRegister() const noexcept{
+				return p_creg;
+			}
 	};
 
 	/**
@@ -255,12 +389,30 @@ namespace qlib{
 				 */
 
 				template<class... Args>
-					inline static _ptr<UnitaryOp<Nregister, Nparam>> create(const std::string& name, const std::array<double, Nparam>& params, const Args&... args){
+					inline static _ptr<UnitaryOp<Nregister, Nparam>> create(const std::string& name, const std::array<double, Nparam>& params, Args&&... args){
 						struct impl : UnitaryOp<Nregister, Nparam>{
-							impl(const std::string& name, const std::array<double, Nparam>& params, const Args&... args) : UnitaryOp<Nregister, Nparam>(name, params, args...){}
+							impl(const std::string& name, const std::array<double, Nparam>& params, Args&&... args) : UnitaryOp<Nregister, Nparam>(name, params, std::forward<Args>(args)...){}
 						};
-						return std::make_shared<impl>(name, params, args...);
+						return std::make_shared<impl>(name, params, std::forward<Args>(args)...);
 					}
+
+				/**
+				 * get the list of quantum registers
+				 * @return list of QuntumRegister*
+				 */
+
+				const std::array<const QuantumRegister*, Nregister> getQuantumRegisters() const noexcept{
+					return p_qregs;
+				}
+
+				/**
+				 * get the list of parameters
+				 * @return list of parameters
+				 */
+
+				const std::array<double, Nparam> getParameters() const noexcept{
+					return params;
+				}
 
 		};
 
@@ -300,13 +452,21 @@ namespace qlib{
 				 */
 
 				template<class... Args>
-					inline static _ptr<UnitaryOp<Nregister, 0>> create(const std::string& name, const Args&... args){
+					inline static _ptr<UnitaryOp<Nregister, 0>> create(const std::string& name, Args&&... args){
 						struct impl : UnitaryOp<Nregister, 0>{
-							impl(const std::string& name, const Args&... args) : UnitaryOp<Nregister, 0>(name, args...){}
+							impl(const std::string& name, Args&&... args) : UnitaryOp<Nregister, 0>(name, std::forward<Args>(args)...){}
 						};
-						return std::make_shared<impl>(name, args...);
+						return std::make_shared<impl>(name, std::forward<Args>(args)...);
 					}
 
+				/**
+				 * get the list of quantum registers
+				 * @return list of QuntumRegister*
+				 */
+
+				const std::array<const QuantumRegister*, Nregister> getQuantumRegisters() const noexcept{
+					return p_qregs;
+				}
 		};
 
 	/**
@@ -342,15 +502,21 @@ namespace qlib{
 				};
 				return std::make_shared<impl>(name, unitaries);
 			}
+
+
+			/**
+			 * get the list of Unitary gates
+			 */
+
+			const std::list<_ptr<AbstUnitary>> getUnitaries() const noexcept{
+				return unitaries;
+			}
 	};
 
 
 	/**
 	 * components factory
 	 */
-
-	//TODO: w/ flyweight pattern?
-	//TODO: how to apply rules for each unitary gates? (eg. X^2=I, CNOT*inv(CNOT)*CNOT=SWAP)
 
 	class Op{
 
@@ -422,7 +588,7 @@ namespace qlib{
 			}
 
 			/**
-			 * generate H gate
+			 * generate H (hadamard) gate
 			 * @param qreg arguments of QuantumRegister
 			 * @return shared_ptr of H operator
 			 */
@@ -432,7 +598,7 @@ namespace qlib{
 			}
 
 			/**
-			 * generate S gate
+			 * generate S (phase) gate
 			 * @param qreg arguments of QuantumRegister
 			 * @return shared_ptr of S operator
 			 */
@@ -442,7 +608,7 @@ namespace qlib{
 			}
 
 			/**
-			 * generate T gate
+			 * generate T (pi/8) gate
 			 * @param qreg arguments of QuantumRegister
 			 * @return shared_ptr of T operator
 			 */
@@ -496,7 +662,7 @@ namespace qlib{
 			}
 
 			/**
-			 * generate TOFFOLI gate
+			 * generate TOFFOLI (CCNOT) gate
 			 * @param control1 control qubit 1
 			 * @param control2 control qubit 2
 			 * @param target target qubit
@@ -508,7 +674,7 @@ namespace qlib{
 			}
 
 			/**
-			 * generate FREDKIN gate
+			 * generate FREDKIN (CSWAP)  gate
 			 * @param control control qubit
 			 * @param target1 target qubit 1
 			 * @param target2 target qubit 2
@@ -545,6 +711,18 @@ namespace qlib{
 
 			inline static _ptr<UnitaryOp<1, 1>> R(double phi, const QuantumRegister& qreg){
 				return Op::U(default_str[DefaultString::R], std::array<double,1>{phi}, qreg);
+			}
+
+			/**
+			 * generate CR (controlled phase-shift) gate
+			 * @param phi phase parameter
+			 * @param control control qubit
+			 * @param target target qubit
+			 * @return shared_ptr of CR operator
+			 */
+
+			inline static _ptr<UnitaryOp<2, 1>> CR(double phi, const QuantumRegister& control, const QuantumRegister& target){
+				return Op::U(default_str[DefaultString::CR], std::array<double,1>{phi},  control, target);
 			}
 
 			/**
