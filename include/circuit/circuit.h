@@ -246,7 +246,7 @@ namespace qlib{
 	//! forward declaration
 	struct CurrentOp;
 
-	//TODO: implement Rules
+	//TODO: implement Rules (constraints)
 	//class Rule;
 
 
@@ -457,7 +457,7 @@ namespace qlib{
 						std::sort(temp_vec.begin(), temp_vec.end());
 						auto last = std::unique(temp_vec.begin(), temp_vec.end());
 						if(last != temp_vec.end())
-							throw InvalidOperationException("duplicate elements on QuantumRegister* list");
+							throw InvalidOperationException("duplicate elements in QuantumRegister* list");
 					}
 
 			public:
@@ -542,7 +542,7 @@ namespace qlib{
 						std::sort(temp_vec.begin(), temp_vec.end());
 						auto last = std::unique(temp_vec.begin(), temp_vec.end());
 						if(last != temp_vec.end())
-							throw InvalidOperationException("duplicate elements on QuantumRegister* list");
+							throw InvalidOperationException("duplicate elements in QuantumRegister* list");
 					}
 
 			public:
@@ -984,6 +984,10 @@ namespace qlib{
 
 				return ret_vec;
 			}
+
+
+			//TODO: implement circuit optimization
+			//TODO: implement expand function (expand all UnitaryContainer)
 	};
 
 
