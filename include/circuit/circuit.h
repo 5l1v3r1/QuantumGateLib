@@ -21,13 +21,17 @@
 #include <iostream>
 #include <cmath>
 #include <limits>
+#include <tuple>
+#include <functional>
+#include <stack>
+#include <iterator>
 
 namespace qlib{
 
 	//TODO: which is better, shared_ptr or unique_ptr ? 
 	//TODO: shared_ptr -> copyable, all members in the class must be const to avoid bugs.
 	//TODO: unique_ptr -> uncopyable (movable), all members in the class need not to be const.
-	
+
 #if 1
 
 	/** abbrebiation of std::shared_ptr
@@ -213,10 +217,25 @@ namespace qlib{
 
 	//! dummy qubit
 	extern DummyQuantumRegister null_qreg;
-	//! dummy bit
+	//! dummy classical bit
 	extern DummyClassicalRegister null_creg;
 
+	/**
+	 * struct for representing current operation in quantum circuit
+	 */
 
+	struct CurrentOp{
+		//!component name
+		std::string name;
+		//!component type
+		ComponentType type;
+		//!component quantum registers
+		std::vector<const QuantumRegister*> p_qreg;
+		//!component classical registers
+		std::vector<const ClassicalRegister*> p_creg;
+		//!component parameters
+		std::vector<double> parameters;
+	};
 
 	/**************************************************/
 
@@ -224,6 +243,11 @@ namespace qlib{
 	class Component;
 	//! forward declaration
 	class AbstUnitary;
+	//! forward declaration
+	struct CurrentOp;
+
+	//TODO: implement Rules
+	//class Rule;
 
 
 	/**
@@ -245,13 +269,18 @@ namespace qlib{
 				:name(name), type(type){
 				}
 
+			/**
+			 * destructor of Component
+			 */
+			virtual ~Component(){}
+
 		public:
 			/**
 			 * get identifier
 			 * @return identifier name
 			 */
 
-			const std::string getName() const{
+			const std::string getName() const noexcept{
 				return name;
 			}
 
@@ -260,11 +289,16 @@ namespace qlib{
 			 * @return component type
 			 */
 
-			ComponentType getType() const{
+			ComponentType getType() const noexcept{
 				return type;
 			}
 
+			/**
+			 * get the list of CurrentOp object
+			 * @return the std::vector of CurrentOp object
+			 */
 
+			virtual const std::vector<CurrentOp> getCurrOp() const noexcept = 0;
 
 	};
 
@@ -328,6 +362,21 @@ namespace qlib{
 			const ClassicalRegister* getClassicalRegister() const noexcept{
 				return p_creg;
 			}
+
+			/**
+			 * get the list of CurrentOp object
+			 * @return the std::vector of CurrentOp object
+			 */
+
+			virtual const std::vector<CurrentOp> getCurrOp() const noexcept override{
+				return std::vector<CurrentOp>({{
+						this->name,
+						this->type,
+						std::vector<const QuantumRegister*>({p_qreg}),
+						std::vector<const ClassicalRegister*>({p_creg}),
+						std::vector<double>(),
+						}});
+			}
 	};
 
 	/**
@@ -346,6 +395,36 @@ namespace qlib{
 				: Component(name, type){
 				}
 
+			/**
+			 * destructor of AbstUnitary
+			 */
+
+			virtual ~AbstUnitary(){}
+
+		public:
+
+			/**
+			 * get the list of parameters
+			 * @return the list of parameters
+			 */
+
+			virtual const std::vector<double> getParams() const noexcept = 0;
+
+			/**
+			 * get the list of registers
+			 * @return the list of registers
+			 */
+
+			virtual const std::vector<const QuantumRegister*> getRegisters() const noexcept = 0;
+
+			/**
+			 * return the inverse operator (dagger operator) of this unitary
+			 * @return the inverse operator (dagger operator) of this unitary
+			 */
+
+			//TODO: implement dagger operation
+			//_ptr<AbstUnitary> dagger() const{
+			//}
 	};
 
 	/**
@@ -359,8 +438,6 @@ namespace qlib{
 			private:
 				//! array of pointer of QuantumRegister
 				const std::array<const QuantumRegister*, Nregister> p_qregs;
-				//! number of registers
-				const size_t num_register = Nregister;
 				//! list of parameters
 				const std::array<double, Nparam> params;
 
@@ -375,6 +452,12 @@ namespace qlib{
 				template<class... Args, typename = typename std::enable_if<all_same<Args...>::value, void>::type>
 					UnitaryOp(const std::string& name, const std::array<double, Nparam>& params, const Args&... args)
 					: AbstUnitary(name, ComponentType::UNITARY_OP_PARAM), p_qregs({&args...}), params(params){
+						std::vector<const QuantumRegister*> temp_vec(p_qregs.begin(), p_qregs.end());
+						// check if temp_vec has duplicate elements
+						std::sort(temp_vec.begin(), temp_vec.end());
+						auto last = std::unique(temp_vec.begin(), temp_vec.end());
+						if(last != temp_vec.end())
+							throw InvalidOperationException("duplicate elements on QuantumRegister* list");
 					}
 
 			public:
@@ -397,23 +480,37 @@ namespace qlib{
 					}
 
 				/**
-				 * get the list of quantum registers
-				 * @return list of QuntumRegister*
+				 * get the list of parameters
+				 * @return the list of parameters
 				 */
 
-				const std::array<const QuantumRegister*, Nregister> getQuantumRegisters() const noexcept{
-					return p_qregs;
+				virtual const std::vector<double> getParams() const noexcept override{
+					return std::vector<double>(params.begin(), params.end());
 				}
 
 				/**
-				 * get the list of parameters
-				 * @return list of parameters
+				 * get the list of registers
+				 * @return the list of registers
 				 */
 
-				const std::array<double, Nparam> getParameters() const noexcept{
-					return params;
+				virtual const std::vector<const QuantumRegister*> getRegisters() const noexcept override{
+					return std::vector<const QuantumRegister*>(p_qregs.begin(), p_qregs.end());
 				}
 
+				/**
+				 * get the list of CurrentOp object
+				 * @return the std::vector of CurrentOp object
+				 */
+
+				virtual const std::vector<CurrentOp> getCurrOp() const noexcept override{
+					return std::vector<CurrentOp>({{
+							this->name,
+							this->type,
+							std::vector<const QuantumRegister*>(p_qregs.begin(), p_qregs.end()),
+							std::vector<const ClassicalRegister*>(),
+							std::vector<double>(params.begin(), params.end()),
+							}});
+				}
 		};
 
 	/**
@@ -430,15 +527,22 @@ namespace qlib{
 				const size_t num_register = Nregister;
 
 				/**
-				 * constructor of UnitaryOp
+				 * constructor of UnitaryOp <br/>
+				 * if the function detects QuantumRegisters with the same pointer, this function throws InvalidOperationException.
 				 * @param name identifier name
 				 * @param args list of the pointers of QuantumRegister
 				 * @tparam Args list of the types of args. Each type must be QuantumRegister
 				 */
 
 				template<class... Args, typename = typename std::enable_if<all_same<Args...>::value, void>::type>
-					UnitaryOp(const std::string& name, const Args&... args)
+					UnitaryOp(const std::string& name, const Args&... args) noexcept(false)
 					: AbstUnitary(name, ComponentType::UNITARY_OP), p_qregs({&args...}){
+						std::vector<const QuantumRegister*> temp_vec(p_qregs.begin(), p_qregs.end());
+						// check if temp_vec has duplicate elements
+						std::sort(temp_vec.begin(), temp_vec.end());
+						auto last = std::unique(temp_vec.begin(), temp_vec.end());
+						if(last != temp_vec.end())
+							throw InvalidOperationException("duplicate elements on QuantumRegister* list");
 					}
 
 			public:
@@ -460,12 +564,36 @@ namespace qlib{
 					}
 
 				/**
-				 * get the list of quantum registers
-				 * @return list of QuntumRegister*
+				 * get the list of parameters
+				 * @return the list of parameters
 				 */
 
-				const std::array<const QuantumRegister*, Nregister> getQuantumRegisters() const noexcept{
-					return p_qregs;
+				virtual const std::vector<double> getParams() const noexcept override{
+					return std::vector<double>();
+				}
+
+				/**
+				 * get the list of registers
+				 * @return the list of registers
+				 */
+
+				virtual const std::vector<const QuantumRegister*> getRegisters() const noexcept override{
+					return std::vector<const QuantumRegister*>(p_qregs.begin(), p_qregs.end());
+				}
+
+				/**
+				 * get the list of CurrentOp object
+				 * @return the std::vector of CurrentOp object
+				 */
+
+				virtual const std::vector<CurrentOp> getCurrOp() const noexcept override{
+					return std::vector<CurrentOp>({{
+							this->name,
+							this->type,
+							std::vector<const QuantumRegister*>(p_qregs.begin(), p_qregs.end()),
+							std::vector<const ClassicalRegister*>(),
+							std::vector<double>(),
+							}});
 				}
 		};
 
@@ -503,6 +631,34 @@ namespace qlib{
 				return std::make_shared<impl>(name, unitaries);
 			}
 
+			/**
+			 * get the list of parameters
+			 * @return the list of parameters
+			 */
+
+			virtual const std::vector<double> getParams() const noexcept override{
+				return std::vector<double>();
+			}
+
+			/**
+			 * get the list of registers <br/>
+			 * returned list is sorted by std::sort algorithm.
+			 * @return the list of registers
+			 */
+
+			virtual const std::vector<const QuantumRegister*> getRegisters() const noexcept override{
+				// concat all registers unitaries hold
+				std::vector<const QuantumRegister*> ret_vec;
+				for(auto&& elem : unitaries){
+					const std::vector<const QuantumRegister*>& vec = elem->getRegisters();
+					ret_vec.insert(ret_vec.end(), vec.begin(), vec.end());
+				}
+				//eliminate duplicate elements
+				std::sort(ret_vec.begin(), ret_vec.end());
+				auto last = std::unique(ret_vec.begin(), ret_vec.end());
+				ret_vec.erase(last, ret_vec.end());
+				return ret_vec;
+			}
 
 			/**
 			 * get the list of Unitary gates
@@ -510,6 +666,21 @@ namespace qlib{
 
 			const std::list<_ptr<AbstUnitary>> getUnitaries() const noexcept{
 				return unitaries;
+			}
+
+			/**
+			 * get the list of CurrentOp object
+			 * @return the std::vector of CurrentOp object
+			 */
+
+			virtual const std::vector<CurrentOp> getCurrOp() const noexcept override{
+				//concat all elements
+				std::vector<CurrentOp> ret_vec;
+				for(auto&& elem : unitaries){
+					const std::vector<CurrentOp>& vec = elem->getCurrOp();
+					ret_vec.insert(ret_vec.end(), vec.begin(), vec.end());
+				}
+				return ret_vec;
 			}
 	};
 
@@ -739,15 +910,6 @@ namespace qlib{
 
 	};
 
-	/**
-	 * class for managing constraint and optimization rules of quantum circuit
-	 */
-
-	class Rule{
-		private:
-			//! list of dagger_pairs (will be used by dagger() in UnitaryOp and UnitaryContainer)
-			static std::vector<std::pair<_ptr<AbstUnitary>, _ptr<AbstUnitary>>> dagger_pairs;
-	};
 
 
 	/**
@@ -756,7 +918,85 @@ namespace qlib{
 
 	class Circuit{
 		private:
+			//! list of components placed in quantum circuit
+			std::list<_ptr<Component>> components;
+			//! quantum register
+			std::vector<QuantumRegister> qreg;
+			//! classical register
+			std::vector<ClassicalRegister> creg;
 		public:
+			/**
+			 * constructor of Circuit
+			 * @param num_register number of (quantum and classical) register
+			 */
+			Circuit(size_t num_register)
+				:qreg(num_register), creg(num_register){
+				}
+
+			/**
+			 * constructor of Circuit
+			 * @param num_qreg number of quantum register
+			 * @param num_creg number of classical register
+			 */
+			Circuit(size_t num_qreg, size_t num_creg)
+				:qreg(num_qreg), creg(num_creg){
+				}
+
+			/**
+			 * return the reference of quantum register
+			 * @return the reference of quantum register
+			 */
+
+			inline const std::vector<QuantumRegister>& getQuantumRegisters(){
+				return this->qreg;
+			}
+
+			/**
+			 * return the reference of classical register
+			 * @return the reference of classical register
+			 */
+
+			inline const std::vector<ClassicalRegister>& getClassicalRegisters(){
+				return this->creg;
+			}
+
+			/**
+			 * add components to quantum circuit
+			 * @param component shard_ptr of Component
+			 * @return the reference of Circuit itself
+			 */
+
+			inline Circuit& addComponent(_ptr<Component> component){
+				components.push_back(component);
+				return *this;
+			}
+
+			/**
+			 * build current operation list registered in container of Circuit
+			 * @return std::vector of CurrentOp struct
+			 */
+			inline const std::vector<CurrentOp> buildCurrOpList(){
+				std::vector<CurrentOp> ret_vec;
+				for(auto&& elem : components){
+					const std::vector<CurrentOp>& vec = elem->getCurrOp();
+					ret_vec.insert(ret_vec.end(), vec.begin(), vec.end());
+				}
+
+				return ret_vec;
+			}
 	};
 
+
 }
+
+/**
+ * add component to quantum circuit (with operator<<)
+ * @param component shard_ptr of Component
+ * @return the reference of Circuit itself
+ */
+
+inline qlib::Circuit& operator<<(qlib::Circuit& circuit, qlib::_ptr<qlib::Component> component){
+	return circuit.addComponent(component);
+}
+
+

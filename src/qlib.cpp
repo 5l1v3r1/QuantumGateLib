@@ -36,20 +36,27 @@ namespace qlib {
 	//! dummy bit
 	DummyClassicalRegister null_creg;
 
-	//! list of dagger pairs (will be used by dagger() function in UnitaryOp and UnitaryContainer)
-	std::vector<std::pair<_ptr<AbstUnitary>, _ptr<AbstUnitary>>> Rule::dagger_pairs = {
-		std::make_pair(Op::X(null_qreg[0]),Op::X(null_qreg[0])),
-		std::make_pair(Op::Y(null_qreg[0]),Op::Y(null_qreg[0])),
-		std::make_pair(Op::Z(null_qreg[0]),Op::Z(null_qreg[0])),
-		std::make_pair(Op::H(null_qreg[0]),Op::H(null_qreg[0])),
-		std::make_pair(Op::S(null_qreg[0]),Op::R(-M_PI/2., null_qreg[0])),
-		std::make_pair(Op::T(null_qreg[0]),Op::R(-M_PI/4., null_qreg[0])),
-		std::make_pair(Op::CNOT(null_qreg[0], null_qreg[1]),Op::CNOT(null_qreg[0], null_qreg[1])),
-		std::make_pair(Op::SWAP(null_qreg[0], null_qreg[1]),Op::SWAP(null_qreg[0], null_qreg[1])),
-		std::make_pair(Op::CZ(null_qreg[0], null_qreg[1]),Op::CZ(null_qreg[0], null_qreg[1])),
-		std::make_pair(Op::CS(null_qreg[0], null_qreg[1]),Op::CR(-M_PI/2., null_qreg[0], null_qreg[1])),
-		std::make_pair(Op::TOFFOLI(null_qreg[0], null_qreg[1], null_qreg[2]), Op::TOFFOLI(null_qreg[0], null_qreg[1], null_qreg[2])),
-		std::make_pair(Op::FREDKIN(null_qreg[0], null_qreg[1], null_qreg[2]), Op::FREDKIN(null_qreg[0], null_qreg[1], null_qreg[2])),
-	};
+	//! list of dagger pairs and function handlers (will be used by dagger() function in UnitaryOp and UnitaryContainer)
+	//TODO: implement Rules
+	/*
+		std::vector<std::tuple<_ptr<AbstUnitary>, _ptr<AbstUnitary>, ParameterFunction>> Rule::dagger_pairs = {
+	//UNITARY_OP -> UNITARY_OP
+	std::make_tuple(Op::X(null_qreg[0]),Op::X(null_qreg[0]), nullptr), //X.dagger() == X
+	std::make_tuple(Op::Y(null_qreg[0]),Op::Y(null_qreg[0]), nullptr),
+	std::make_tuple(Op::Z(null_qreg[0]),Op::Z(null_qreg[0]), nullptr),
+	std::make_tuple(Op::H(null_qreg[0]),Op::H(null_qreg[0]), nullptr),
+	std::make_tuple(Op::S(null_qreg[0]),Op::R(-M_PI/2., null_qreg[0]), nullptr),
+	std::make_tuple(Op::T(null_qreg[0]),Op::R(-M_PI/4., null_qreg[0]), nullptr),
+	std::make_tuple(Op::CNOT(null_qreg[0], null_qreg[1]),Op::CNOT(null_qreg[0], null_qreg[1]), nullptr),
+	std::make_tuple(Op::SWAP(null_qreg[0], null_qreg[1]),Op::SWAP(null_qreg[0], null_qreg[1]), nullptr),
+	std::make_tuple(Op::CZ(null_qreg[0], null_qreg[1]),Op::CZ(null_qreg[0], null_qreg[1]), nullptr),
+	std::make_tuple(Op::CS(null_qreg[0], null_qreg[1]),Op::CR(-M_PI/2., null_qreg[0], null_qreg[1]), nullptr),
+	std::make_tuple(Op::TOFFOLI(null_qreg[0], null_qreg[1], null_qreg[2]), Op::TOFFOLI(null_qreg[0], null_qreg[1], null_qreg[2]), nullptr),
+	std::make_tuple(Op::FREDKIN(null_qreg[0], null_qreg[1], null_qreg[2]), Op::FREDKIN(null_qreg[0], null_qreg[1], null_qreg[2]), nullptr),
+	//UNITARY_OP_PARAM -> UNITARY_OP_PARAM
+	std::make_tuple(Op::R(0, null_qreg[0]), Op::R(0, null_qreg[0]), [](std::vector<double> x){return std::vector<double>{-x[0]};}),//R(x).dagger() == R(-x)
+	std::make_tuple(Op::CR(0, null_qreg[0], null_qreg[1]), Op::CR(0, null_qreg[0], null_qreg[1]), [](std::vector<double> x){return std::vector<double>{-x[0]};}),
 
+	};
+	*/
 } 
