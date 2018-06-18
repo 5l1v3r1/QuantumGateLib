@@ -408,7 +408,9 @@ namespace qlib{
 			 * @return the list of parameters
 			 */
 
-			virtual const std::vector<double> getParams() const noexcept = 0;
+			virtual const std::vector<double> getParams() const noexcept{
+				return std::vector<double>();
+			}
 
 			/**
 			 * get the list of registers
@@ -564,15 +566,6 @@ namespace qlib{
 					}
 
 				/**
-				 * get the list of parameters
-				 * @return the list of parameters
-				 */
-
-				virtual const std::vector<double> getParams() const noexcept override{
-					return std::vector<double>();
-				}
-
-				/**
 				 * get the list of registers
 				 * @return the list of registers
 				 */
@@ -629,15 +622,6 @@ namespace qlib{
 					impl(const std::string& name, const std::list<_ptr<AbstUnitary>>& unitaries) : UnitaryContainer(name, unitaries){}
 				};
 				return std::make_shared<impl>(name, unitaries);
-			}
-
-			/**
-			 * get the list of parameters
-			 * @return the list of parameters
-			 */
-
-			virtual const std::vector<double> getParams() const noexcept override{
-				return std::vector<double>();
 			}
 
 			/**
@@ -988,6 +972,7 @@ namespace qlib{
 
 			//TODO: implement circuit optimization
 			//TODO: implement expand function (expand all UnitaryContainer)
+			//TODO: other components? (for? if? (quantum for?)(quantum if?))
 	};
 
 
