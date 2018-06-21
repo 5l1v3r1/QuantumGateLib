@@ -29,23 +29,12 @@
 namespace qlib{
 
 	//TODO: which is better, shared_ptr or unique_ptr ? 
-	//TODO: shared_ptr -> copyable, all members in the class must be const to avoid bugs.
-	//TODO: unique_ptr -> uncopyable (movable), all members in the class need not to be const.
-
-#if 1
-
+	
 	/** abbrebiation of std::shared_ptr
 	 * @tparam T the type for shared_ptr
 	 */
 	template<class T>
 		using _ptr = std::shared_ptr<T>;
-#else
-	/** abbrebiation of std::unique_ptr
-	 * @tparam T the type for unique_ptr
-	 */
-	template<class T>
-		using _ptr = std::unique_ptr<T>;
-#endif
 
 	/**
 	 * print exception message
