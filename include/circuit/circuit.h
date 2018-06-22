@@ -28,13 +28,11 @@
 
 namespace qlib{
 
-	//TODO: which is better, shared_ptr or unique_ptr ? 
-	
-	/** abbrebiation of std::shared_ptr
-	 * @tparam T the type for shared_ptr
+	/** abbrebiation of std::unique_ptr
+	 * @tparam T the type for unique_ptr
 	 */
 	template<class T>
-		using _ptr = std::shared_ptr<T>;
+		using _ptr = std::unique_ptr<T>;
 
 	/**
 	 * print exception message
