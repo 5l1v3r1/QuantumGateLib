@@ -33,8 +33,6 @@ namespace qlib {
 
 	//! dummy qubit
 	DummyQuantumRegister null_qreg;
-	//! dummy bit
-	DummyClassicalRegister null_creg;
 
 	//! list of dagger pairs and function handlers (will be used by dagger() function in UnitaryOp and UnitaryContainer)
 	//TODO: implement Rules
