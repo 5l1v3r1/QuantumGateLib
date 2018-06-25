@@ -98,8 +98,12 @@ namespace qlib{
 		//! out(right) node
 		Node* out;
 		//! parent
-		Component* parent;
+		Component* const parent;
 	};
+
+	/**
+	 * class for representing Component
+	 */
 
 	class Component{
 		protected:
@@ -108,7 +112,7 @@ namespace qlib{
 			//! component type
 			const ComponentType type;
 			//! its parent
-			Component* parent;
+			Component* const parent;
 			//! list of Nodes
 			std::map<std::string, Node> nodes;
 			/**
@@ -116,7 +120,7 @@ namespace qlib{
 			 * @param name identifier name
 			 * @param type component type
 			 */
-			Component(const std::string& name, const ComponentType type, const Component* parent = nullptr)
+			Component(const std::string& name, ComponentType type, Component* parent = nullptr)
 				:name(name), type(type), parent(parent){
 				}
 
@@ -127,6 +131,10 @@ namespace qlib{
 
 			virtual const std::vector<CurrentOp> getCurrOp() const noexcept = 0;
 	};
+
+	/**
+	 * class for representing Measurement
+	 */
 
 
 	/**
