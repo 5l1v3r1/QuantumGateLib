@@ -40,7 +40,7 @@ namespace qlib{
 	}
 
 	/**
-	 * An exception class for QuantumCircuit library
+	 * An exception class for QuantumCircuit library (InvalidOperation)
 	 */
 
 	class InvalidOperationException: public std::exception{
@@ -57,6 +57,31 @@ namespace qlib{
 
 			InvalidOperationException(const std::string& msg)
 				: message(exception_format("InvalidOperation", msg)){
+				}
+
+			virtual const char* what() const noexcept{
+				return message.c_str();
+			}
+	};
+
+	/**
+	 * An exception class for QuantumCircuit library (NullPointer)
+	 */
+
+	class NullPointerException: public std::exception{
+		private:
+			//! exception message
+			std::string message;
+
+		public:
+
+			/**
+			 * constructor of InvalidOperationException
+			 * @param msg additional exception message
+			 */
+
+			NullPointerException(const std::string& msg)
+				: message(exception_format("NullPointer", msg)){
 				}
 
 			virtual const char* what() const noexcept{
