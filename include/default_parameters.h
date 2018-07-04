@@ -35,20 +35,10 @@ namespace qlib{
 		T,
 		//! rotate (phase-shift) gate
 		R,
-		//! controlled-NOT
-		CNOT,
 		//! swap gate
 		SWAP,
-		//! controlled-Z
-		CZ,
-		//! controlled-S
-		CS,
-		//! controlled-R
-		CR,
-		//! toffoli gate
-		TOFFOLI,
-		//! fredkin gate (controlled-SWAP)
-		FREDKIN,
+		//! generalized control gate
+		CONTROL,
 		//! the number of default strings
 		NUMSTR,
 	};
@@ -57,18 +47,29 @@ namespace qlib{
 	extern const std::array<std::string, DefaultString::NUMSTR> default_str;
 
 	/**
-	 * enum for representing component types
+	 * default node strings for Measure class
 	 */
-	enum ComponentType{
-		//! undefined
-		UNDEFINED,
-		//! measurement
-		MEASUREMENT,
-		//! single unitary operator
-		UNITARY_OP,
-		//! single unitary operator with parameters
-		UNITARY_OP_PARAM,
-		//! unitary container
-		UNITARY_CONTAINER,
+
+	struct MeasureStr{
+		//! nodename : measure
+		const static std::string measure;
+	};
+
+	/**
+	 * default node strings for UnitaryOp class with single node
+	 */
+
+	struct UnitaryOpStr{
+		//! nodename : s 
+		const static std::string singlenode;
+	};
+
+	/**
+	 * default node string for swap unitary gate
+	 */
+
+	struct SwapStr{
+		//nodename : swap0, swap1
+		const static std::string swap;
 	};
 }

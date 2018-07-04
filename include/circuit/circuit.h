@@ -1,3 +1,4 @@
+
 /**
  * @file circuit.h
  * @brief describing quantum circuits and quantum gates
@@ -42,8 +43,6 @@ namespace qlib{
 	struct CurrentOp{
 		//!component name
 		std::string name;
-		//!component type
-		ComponentType type;
 		//!component of node_name and the correspondingquantum registers
 		std::vector<NodeInfo> p_info;
 		//!component parameters
@@ -52,13 +51,12 @@ namespace qlib{
 		/**
 		 * constructor of CurrentOp
 		 * @param name component name
-		 * @param type component type
 		 * @param p_info component of node_name and the correspondingquantum registers
 		 * @param parameters component parameters
 		 */
 
-		CurrentOp(const std::string& name, ComponentType type, const std::vector<NodeInfo>& p_info, const std::vector<double> parameters)
-			: name(name), type(type), p_info(p_info), parameters(parameters)
+		CurrentOp(const std::string& name, const std::vector<NodeInfo>& p_info, const std::vector<double> parameters)
+			: name(name), p_info(p_info), parameters(parameters)
 		{}
 
 
@@ -79,11 +77,11 @@ namespace qlib{
 	};
 
 	/**
-	 * inverse IN out OUT
+	 * inverse IN and OUT
 	 * @param dir direction
 	 * @return inverse direction
 	 */
-	
+
 	inline ConnectDir inv(ConnectDir dir){
 		return (dir==ConnectDir::IN)?ConnectDir::OUT:ConnectDir::IN;
 	}
@@ -214,14 +212,9 @@ namespace qlib{
 	 */
 
 	class Component{
-		public:
-
-
 		protected:
 			//! an identifier
 			const std::string name;
-			//! component type
-			const ComponentType type;
 			//! its parent
 			Component* const parent;
 			//! list of Nodes
@@ -229,17 +222,13 @@ namespace qlib{
 			/**
 			 * constructor of Component
 			 * @param name identifier name
-			 * @param type component type
 			 * @param parent the pointer to the parent
 			 */
-			Component(const std::string& name, ComponentType type, Component* parent = nullptr)
-				:name(name), type(type), parent(parent){
+			Component(const std::string& name, Component* parent = nullptr)
+				:name(name), parent(parent){
+					// add Node to nodes
 				}
 
-			/**
-			 * destructor of Component
-			 */
-			virtual ~Component(){}
 
 			/**
 			 * get Node function
@@ -251,6 +240,15 @@ namespace qlib{
 				return this->nodes.at(node_name);
 			}
 
+			/**
+			 * get Node function (const version)
+			 * @param node_name the node name
+			 * @return corresponding node
+			 */
+
+			inline const Node& getNode(const std::string& node_name) const{
+				return this->nodes.at(node_name);
+			}
 
 			/**
 			 * callback function which is called when detecting the node to be connected.
@@ -276,6 +274,12 @@ namespace qlib{
 			}
 
 		public:
+
+			/**
+			 * destructor of Component
+			 */
+			virtual ~Component(){}
+
 
 			/**
 			 * connect the (IN|OUT) socket to the node <br/>
@@ -333,15 +337,6 @@ namespace qlib{
 				return true;
 			}
 
-			/**
-			 * get Node function (const version)
-			 * @param node_name the node name
-			 * @return corresponding node
-			 */
-
-			inline const Node& getNode(const std::string& node_name) const{
-				return this->nodes.at(node_name);
-			}
 
 			/**
 			 * get the information of the adjacent node
@@ -364,10 +359,10 @@ namespace qlib{
 			 * get the subComponent(children) by name
 			 * this function throws InvalidOperationException if not defined.
 			 * @param component_name the name of subcomponent
-			 * @return the derived component
+			 * @return the corresponding component
 			 */
 
-			virtual Component& getSubComponent(const std::string& /*component_name*/){
+			virtual Component& getSubComponent(const std::string& /*component_name*/) const{
 				throw InvalidOperationException("the component has no children.");
 			}
 
@@ -382,7 +377,6 @@ namespace qlib{
 				auto ret = 
 					std::vector<CurrentOp>({{
 							this->name,
-							this->type,
 							std::vector<NodeInfo>(),
 							std::vector<double>(),
 							}});
@@ -406,53 +400,16 @@ namespace qlib{
 			}
 
 			/**
-			 * get component type
-			 * @return component type
-			 */
-
-			inline ComponentType getType() const noexcept{
-				return this->type;
-			}
-
-			/**
 			 * get the pointer to its parents
 			 * if the component has no parent, this function returns nullptr
 			 * @return the pointer to its parents (may be nullptr)
 			 */
 
-			inline Component* getParent(){
-				return this->parent;
-			}
-
-			/**
-			 * get the pointer to its parents (const version)
-			 * if the component has no parent, this function returns nullptr
-			 * @return the pointer to its parents (may be nullptr)
-			 */
-
-			inline const Component* getParent() const{
+			inline Component* getParent() const{
 				return this->parent;
 			}
 	};
 
-	/**
-	 * unique_ptr factory
-	 * @tparam Object a class derived from Component
-	 */
-
-	template<class Object>
-	struct UniquePtrFactory{
-
-		/**
-		 * generate unique_ptr of the object
-		 * @parma args arguments for instantiation of the object
-		 * @return unique_ptr of the object
-		 */
-		template<class... Args>
-		static u_ptr<Object> create(Args&&... args){
-			return u_ptr<Object>(new Object(std::forward<Args>(args)...));
-		}
-	};
 
 	/**
 	 * class for representing Measurement
@@ -460,10 +417,9 @@ namespace qlib{
 	 */
 
 	class Measure : public Component{
-		//! friend class UniquePtrFactory, this class can not be initialized only through UniquePtrFactory.
-		friend struct UniquePtrFactory<Measure>;
-
 		private:
+			//! friend class UniquePtrFactory, this class can be initialized only through UniquePtrFactory.
+			friend struct UniquePtrFactory<Measure>;
 
 			/**
 			 * nodename ("measure")
@@ -477,7 +433,7 @@ namespace qlib{
 			 */
 
 			Measure(Component* parent = nullptr)
-				: Component(default_str[MEASURE], ComponentType::MEASUREMENT, parent), measure("measure"){
+				: Component(default_str[MEASURE], parent), measure("measure"){
 					//add node "measure"
 					this->nodes[measure] = Node(measure, this);
 				}
@@ -505,10 +461,9 @@ namespace qlib{
 	 */
 
 	class UnitaryOp : public Component{
-		//! friend class UniquePtrFactory, this class can not be initialized only through UniquePtrFactory.
-		friend struct UniquePtrFactory<UnitaryOp>;
-
 		private:
+			//! friend class UniquePtrFactory, this class can be initialized only through UniquePtrFactory.
+			friend struct UniquePtrFactory<UnitaryOp>;
 
 			//! list of parameters
 			const std::vector<double> params;
@@ -522,7 +477,7 @@ namespace qlib{
 			 */
 
 			UnitaryOp(const std::string& gate_name, const std::vector<double>& params, const std::vector<std::string>& node_strs, Component* parent = nullptr)
-				: Component(gate_name, ComponentType::UNITARY_OP_PARAM, parent), params(params){
+				: Component(gate_name, parent), params(params){
 					for(auto&& elem : node_strs){
 						this->nodes[elem] = Node(elem, this);
 					}
@@ -536,7 +491,7 @@ namespace qlib{
 			 */
 
 			UnitaryOp(const std::string& gate_name, const std::vector<std::string>& node_strs, Component* parent = nullptr)
-				: Component(gate_name, ComponentType::UNITARY_OP, parent){
+				: Component(gate_name, parent){
 					for(auto&& elem : node_strs){
 						this->nodes[elem] = Node(elem, this);
 					}
@@ -553,7 +508,6 @@ namespace qlib{
 				auto ret = 
 					std::vector<CurrentOp>({{
 							this->name,
-							this->type,
 							std::vector<NodeInfo>(),
 							params,
 							}});
@@ -568,12 +522,67 @@ namespace qlib{
 			}
 	};
 
-	//TODO: control gate ( : UnitaryOp)
+	/**
+	 * abstract class of component which has subcomponents
+	 */
+
+
+	class AbstComponentContainer : public Component{
+		protected:
+			//! subcomponents
+			std::map<std::string, u_ptr<Component>> subcomponents;
+
+			/**
+			 * constructor of ComponentContainer
+			 * @param name identifier name
+			 * @param parent the pointer to the parent
+			 */
+
+			AbstComponentContainer(const std::string& name, Component* parent = nullptr)
+				: Component(name, parent){
+					// add u_ptr<Component> to subcomponents
+				}
+
+		public:
+
+			/**
+			 * get the subComponent(children) by name
+			 * this function throws InvalidOperationException if not defined.
+			 * @param component_name the name of subcomponent
+			 * @return the derived component
+			 */
+
+			Component& getSubComponent(const std::string& component_name) const override{
+				return *(this->subcomponents.at(component_name));
+			}
+	};
+
 	/**
 	 * class for representing generalized control gate
-	 * nodename : control1, control2, ... , control N
+	 * nodename : control0, control1, ... , control N-1 (N = ctrl_num)
 	 * subcomponents : target (UnitaryOp)
 	 */
+
+	class ControlGate : public AbstComponentContainer{
+		private:
+			//! friend class UniquePtrFactory, this class can be initialized only through UniquePtrFactory.
+			friend struct UniquePtrFactory<ControlGate>;
+
+			/**
+			 * constructor of CotrolGate
+			 * @param ctrl_num the number of control nodes
+			 * @param target_unitary target unitary gate
+			 * @param parent the pointer to the parent
+			 */
+
+			ControlGate(size_t ctrl_num, u_ptr<UnitaryOp> target_unitary, Component* parent = nullptr)
+			: AbstComponentContainer(default_str[DefaultString::CONTROL], parent){
+				//TODO: add ctrl_num control nodes
+				//TODO: add target unitary operator
+			}
+
+
+	};
 
 	//TODO: measurement-if ( : Component)
 	/**
@@ -588,6 +597,8 @@ namespace qlib{
 	 * nodename : 
 	 * subcomponents : [any]
 	 */
+
+	//TODO register container?
 
 	//TODO: const reference of this->nodes?
 	//TODO: should the key of the node be enum rather than string?
@@ -610,5 +621,4 @@ namespace qlib{
 //inline qlib::Circuit& operator<<(qlib::Circuit& circuit, qlib::_ptr<qlib::Component> component){
 //	return circuit.addComponent(component);
 //}
-
 

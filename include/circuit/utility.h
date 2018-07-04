@@ -143,4 +143,34 @@ namespace qlib{
 		return std::abs(a-b) < std::numeric_limits<double>::epsilon();
 	}
 
+	/**
+	 * generating indexing string
+	 * @param str string
+	 * @param index the index of string
+	 * @return str + index string
+	 */
+
+	inline const std::string genstr(const std::string& str, size_t index){
+		return str + std::to_string(index);
+	}
+
+	/**
+	 * unique_ptr factory
+	 * @tparam Object a class derived from Component
+	 */
+
+	template<class Object>
+	struct UniquePtrFactory{
+
+		/**
+		 * generate unique_ptr of the object
+		 * @parma args arguments for instantiation of the object
+		 * @return unique_ptr of the object
+		 */
+		template<class... Args>
+		static u_ptr<Object> create(Args&&... args){
+			return u_ptr<Object>(new Object(std::forward<Args>(args)...));
+		}
+	};
+
 }

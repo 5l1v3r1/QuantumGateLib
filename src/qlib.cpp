@@ -10,6 +10,8 @@
 #include "../include/circuit/circuit.h"
 #include <cmath>
 
+//TODO: remove cpp file
+
 namespace qlib {
 	//! default string of measurement
 	const std::array<std::string, DefaultString::NUMSTR> default_str= {
@@ -22,39 +24,17 @@ namespace qlib {
 		"__default_s_",
 		"__default_t_",
 		"__default_r_",
-		"__default_cnot_",
 		"__default_swap_",
-		"__default_cz_",
-		"__default_cs_",
-		"__default_cr_",
-		"__default_toffoli_",
-		"__default_fredkin_",
+		"__default_ctrl_",
 	};
 
 	//! dummy node
 	Node null_node("dummy");
 
-	//! list of dagger pairs and function handlers (will be used by dagger() function in UnitaryOp and UnitaryContainer)
-	//TODO: implement Rules
-	/*
-		std::vector<std::tuple<_ptr<AbstUnitary>, _ptr<AbstUnitary>, ParameterFunction>> Rule::dagger_pairs = {
-	//UNITARY_OP -> UNITARY_OP
-	std::make_tuple(Op::X(null_qreg[0]),Op::X(null_qreg[0]), nullptr), //X.dagger() == X
-	std::make_tuple(Op::Y(null_qreg[0]),Op::Y(null_qreg[0]), nullptr),
-	std::make_tuple(Op::Z(null_qreg[0]),Op::Z(null_qreg[0]), nullptr),
-	std::make_tuple(Op::H(null_qreg[0]),Op::H(null_qreg[0]), nullptr),
-	std::make_tuple(Op::S(null_qreg[0]),Op::R(-M_PI/2., null_qreg[0]), nullptr),
-	std::make_tuple(Op::T(null_qreg[0]),Op::R(-M_PI/4., null_qreg[0]), nullptr),
-	std::make_tuple(Op::CNOT(null_qreg[0], null_qreg[1]),Op::CNOT(null_qreg[0], null_qreg[1]), nullptr),
-	std::make_tuple(Op::SWAP(null_qreg[0], null_qreg[1]),Op::SWAP(null_qreg[0], null_qreg[1]), nullptr),
-	std::make_tuple(Op::CZ(null_qreg[0], null_qreg[1]),Op::CZ(null_qreg[0], null_qreg[1]), nullptr),
-	std::make_tuple(Op::CS(null_qreg[0], null_qreg[1]),Op::CR(-M_PI/2., null_qreg[0], null_qreg[1]), nullptr),
-	std::make_tuple(Op::TOFFOLI(null_qreg[0], null_qreg[1], null_qreg[2]), Op::TOFFOLI(null_qreg[0], null_qreg[1], null_qreg[2]), nullptr),
-	std::make_tuple(Op::FREDKIN(null_qreg[0], null_qreg[1], null_qreg[2]), Op::FREDKIN(null_qreg[0], null_qreg[1], null_qreg[2]), nullptr),
-	//UNITARY_OP_PARAM -> UNITARY_OP_PARAM
-	std::make_tuple(Op::R(0, null_qreg[0]), Op::R(0, null_qreg[0]), [](std::vector<double> x){return std::vector<double>{-x[0]};}),//R(x).dagger() == R(-x)
-	std::make_tuple(Op::CR(0, null_qreg[0], null_qreg[1]), Op::CR(0, null_qreg[0], null_qreg[1]), [](std::vector<double> x){return std::vector<double>{-x[0]};}),
+	//! nodename : measure
+	const std::string MeasureStr::measure = "measure";
+	//! nodename : singlenode 
+	const std::string UnitaryOpStr::singlenode = "singlenode";
 
-	};
-	*/
+
 } 
