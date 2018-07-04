@@ -32,45 +32,12 @@ namespace qlib{
 		//TODO: register num?
 	};
 
-	/**
-	 * dummy quantum register
-	 */
-
-	class DummyQuantumRegister{
-		private:
-			//! list of dummy quantum register
-			std::vector<QuantumRegister> dummy_register;
-
-			/**
-			 * constructor of dummy quantum register
-			 * @param pointer the value to be set to dummy_pointer
-			 */
-
-		public:
-			DummyQuantumRegister(){}
-
-			/**
-			 * return object itself with dummy_pointer changed to index value
-			 * @param index index value
-			 * @return object itself with dummy_pointer changed to index value
-			 */
-			const QuantumRegister& operator[](size_t index){
-				if(index >= dummy_register.size()){
-					//resize dummy_register
-					dummy_register.resize(index+1);
-				}
-				return dummy_register[index];
-			}
-	};
-
-	//! dummy qubit
-	extern DummyQuantumRegister null_qreg;
+	//! NodeInfo type
+	using NodeInfo = std::pair<const std::string, const QuantumRegister*>;
 
 	/**
 	 * struct for representing current operation in quantum circuit
 	 */
-
-	using NodeInfo = std::pair<const std::string, const QuantumRegister*>;
 
 	struct CurrentOp{
 		//!component name
@@ -101,6 +68,25 @@ namespace qlib{
 
 	//!forward declaration
 	class Component;
+
+	/**
+	 * enum for node IN and OUT
+	 */
+
+	enum ConnectDir{
+		IN,
+		OUT,
+	};
+
+	/**
+	 * inverse IN out OUT
+	 * @param dir direction
+	 * @return inverse direction
+	 */
+	
+	inline ConnectDir inv(ConnectDir dir){
+		return (dir==ConnectDir::IN)?ConnectDir::OUT:ConnectDir::IN;
+	}
 
 	/**
 	 * struct for Node of Component
@@ -161,6 +147,36 @@ namespace qlib{
 			return *this;
 		}
 
+		/**
+		 * get the refernce of Node* from ConnectDir enum
+		 * @enum dir direction
+		 * @return the corresponding reference of Node*
+		 */
+
+		inline Node*& ptr(ConnectDir dir){
+			if(dir == ConnectDir::IN){
+				return in;
+			}
+			else{
+				return out;
+			}
+		}
+
+		/**
+		 * get the refernce of Node* from ConnectDir enum (const version)
+		 * @enum dir direction
+		 * @return the corresponding reference of Node*
+		 */
+
+		inline Node* ptr(ConnectDir dir) const{
+			if(dir == ConnectDir::IN){
+				return in;
+			}
+			else{
+				return out;
+			}
+		}
+
 	};
 
 	/**
@@ -171,17 +187,13 @@ namespace qlib{
 	 */
 
 	inline bool operator==(const Node& lhs, const Node& rhs){
-		if(
+		return(
 				lhs.name   == rhs.name   &&
 				lhs.in     == rhs.in     &&
 				lhs.out    == rhs.out    &&
 				lhs.parent == rhs.parent &&
-				lhs.q_reg  == rhs.q_reg){
-			return true;
-		}
-		else{
-			return false;
-		}
+				lhs.q_reg  == rhs.q_reg
+				);
 	}
 
 	/**
@@ -204,14 +216,6 @@ namespace qlib{
 	class Component{
 		public:
 
-			/**
-			 * enum for node IN and OUT
-			 */
-
-			enum ConnectDir{
-				IN,
-				OUT,
-			};
 
 		protected:
 			//! an identifier
@@ -257,14 +261,7 @@ namespace qlib{
 			 */
 
 			virtual void OnConnect(const std::string& node_name, Node& added_node, ConnectDir direction){
-				if(direction == ConnectDir::IN){
-					//set "in" of the node
-					this->getNode(node_name).in = &added_node;
-				}
-				else{
-					//set "out" of the node
-					this->getNode(node_name).out = &added_node;
-				}
+				this->getNode(node_name).ptr(direction) = &added_node;
 			}
 
 			/**
@@ -275,12 +272,7 @@ namespace qlib{
 			 */
 
 			virtual void OnRemove(const std::string& node_name, ConnectDir direction){
-				if(direction == ConnectDir::IN){
-					this->getNode(node_name).in = nullptr;
-				}
-				else{
-					this->getNode(node_name).out = nullptr;
-				}
+				this->getNode(node_name).ptr(direction) = nullptr;
 			}
 
 		public:
@@ -299,34 +291,19 @@ namespace qlib{
 			 */
 
 			bool connectNode(const std::string& node_name, Component& target, const std::string& target_node_name, ConnectDir direction){
-				if(direction == ConnectDir::IN){
-					if(this->getNode(node_name).in != nullptr){
-						// already connected
-						return false;
-					}
+				if(this->getNode(node_name).ptr(direction) != nullptr){
+					// already connected
+					return false;
+				}
 
-					//callback (ask the target if the connection can be accepted)
-					target.OnConnect(target_node_name, this->getNode(node_name), ConnectDir::OUT);
-					// if the callback succeeds...
-					// set "in" of the node
-					this->getNode(node_name).in = &(target.getNode(target_node_name));
-					// set q_reg
+				//callback (ask the target if the connection can be accepted)
+				target.OnConnect(target_node_name, this->getNode(node_name), inv(direction));
+				// if the callback succeeds...
+				// set direction of the node
+				this->getNode(node_name).ptr(direction) = &(target.getNode(target_node_name));
+				// set q_reg if direction == IN
+				if(direction == ConnectDir::IN)
 					this->getNode(node_name).q_reg = target.getNode(target_node_name).q_reg;
-				}
-				else{
-					if(this->getNode(node_name).out != nullptr){
-						// already connected
-						return false;
-					}
-
-					//callback (ask the target if the connection can be accepted)
-					target.OnConnect(target_node_name, this->getNode(node_name), ConnectDir::IN);
-					// if the callback succeeds...
-					// set "out" of the node
-					this->getNode(node_name).out = &(target.getNode(target_node_name));
-					// set q_reg (not needed when connecting OUT node)
-					//this->getNode(node_name).q_reg = target.getNode(target_node_name).q_reg;
-				}
 
 				return true;
 			}
@@ -341,28 +318,17 @@ namespace qlib{
 			 */
 
 			bool removeNode(const std::string& node_name, ConnectDir direction){
-				if(direction == ConnectDir::IN){
-					if(this->getNode(node_name).in == nullptr)
-						return false;
-
-					//callback
-					const Node& target_node = this->getAdjNode(node_name, ConnectDir::IN);
-					Component& target = *(target_node.parent);
-					target.OnRemove(target_node.name, ConnectDir::OUT);
-
-					this->getNode(node_name).in = nullptr;
+				if(this->getNode(node_name).ptr(direction) == nullptr){
+					//not connected
+					return false;
 				}
-				else{
-					if(this->getNode(node_name).out == nullptr)
-						return false;
 
-					//callback
-					const Node& target_node = this->getAdjNode(node_name, ConnectDir::OUT);
-					Component& target = *(target_node.parent);
-					target.OnRemove(target_node.name, ConnectDir::IN);
+				//callback
+				const Node& target_node = this->getAdjNode(node_name, direction);
+				Component& target = *(target_node.parent);
+				target.OnRemove(target_node.name, inv(direction));
 
-					this->getNode(node_name).out = nullptr;
-				}
+				this->getNode(node_name).ptr(direction) = nullptr;
 
 				return true;
 			}
@@ -386,22 +352,12 @@ namespace qlib{
 			 */
 
 			const Node& getAdjNode(const std::string& node_name, ConnectDir direction) const{
-				if(direction == ConnectDir::IN){
-					if(this->getNode(node_name).in == nullptr){
-						// return dummy node
-						return null_node;
-					}
-
-					return *(this->getNode(node_name).in);
+				if(this->getNode(node_name).ptr(direction) == nullptr){
+					// return dummy node
+					return null_node;
 				}
-				else{
-					if(this->getNode(node_name).out == nullptr){
-						//return dummy node
-						return null_node;
-					}
 
-					return *(this->getNode(node_name).out);
-				}
+				return *(this->getNode(node_name).ptr(direction));
 			}
 
 			/**
@@ -412,7 +368,7 @@ namespace qlib{
 			 */
 
 			virtual Component& getSubComponent(const std::string& /*component_name*/){
-				throw InvalidOperationException("this function is not defined.");
+				throw InvalidOperationException("the component has no children.");
 			}
 
 
@@ -445,7 +401,7 @@ namespace qlib{
 			 * @return identifier name
 			 */
 
-			const std::string getName() const noexcept{
+			inline const std::string getName() const noexcept{
 				return this->name;
 			}
 
@@ -454,7 +410,7 @@ namespace qlib{
 			 * @return component type
 			 */
 
-			ComponentType getType() const noexcept{
+			inline ComponentType getType() const noexcept{
 				return this->type;
 			}
 
@@ -464,7 +420,7 @@ namespace qlib{
 			 * @return the pointer to its parents (may be nullptr)
 			 */
 
-			Component* getParent(){
+			inline Component* getParent(){
 				return this->parent;
 			}
 
@@ -474,9 +430,28 @@ namespace qlib{
 			 * @return the pointer to its parents (may be nullptr)
 			 */
 
-			const Component* getParent() const{
+			inline const Component* getParent() const{
 				return this->parent;
 			}
+	};
+
+	/**
+	 * unique_ptr factory
+	 * @tparam Object a class derived from Component
+	 */
+
+	template<class Object>
+	struct UniquePtrFactory{
+
+		/**
+		 * generate unique_ptr of the object
+		 * @parma args arguments for instantiation of the object
+		 * @return unique_ptr of the object
+		 */
+		template<class... Args>
+		static u_ptr<Object> create(Args&&... args){
+			return u_ptr<Object>(new Object(std::forward<Args>(args)...));
+		}
 	};
 
 	/**
@@ -485,6 +460,9 @@ namespace qlib{
 	 */
 
 	class Measure : public Component{
+		//! friend class UniquePtrFactory, this class can not be initialized only through UniquePtrFactory.
+		friend struct UniquePtrFactory<Measure>;
+
 		private:
 
 			/**
@@ -519,21 +497,6 @@ namespace qlib{
 
 				Component::OnConnect(node_name, node, direction);
 			}
-
-		public:
-
-			/**
-			 * generate shared_ptr of Measure
-			 * @return shared_ptr of Measure
-			 */
-
-			inline static u_ptr<Measure> create(Component* parent = nullptr){
-				struct impl: Measure{
-					impl(Component* parent) : Measure(parent){}
-				};
-				return u_ptr<impl>(new impl(parent));
-			}
-
 	};
 
 	/**
@@ -542,6 +505,9 @@ namespace qlib{
 	 */
 
 	class UnitaryOp : public Component{
+		//! friend class UniquePtrFactory, this class can not be initialized only through UniquePtrFactory.
+		friend struct UniquePtrFactory<UnitaryOp>;
+
 		private:
 
 			//! list of parameters
@@ -600,46 +566,31 @@ namespace qlib{
 
 				return ret;
 			}
-
-			/**
-			 * generate shared_ptr of UnitaryOp 
-			 * @param gate_name the gate_name of the UnitaryOp (X-gate, R-gate...)
-			 * @param params a vector of double parameters
-			 * @param node_strs a set of strings of node
-			 * @return shared_ptr of UnitaryOp
-			 */
-
-			inline static u_ptr<UnitaryOp> create(const std::string& gate_name, const std::vector<double>& params, const std::vector<std::string>& node_strs, Component* parent = nullptr){
-				struct impl: UnitaryOp{
-					impl(const std::string& gate_name, const std::vector<double>& params, const std::vector<std::string>& node_strs, Component* parent) : UnitaryOp(gate_name, params, node_strs, parent){}
-				};
-				return u_ptr<impl>(new impl(gate_name, params, node_strs, parent));
-			}
-
-			/**
-			 * generate shared_ptr of UnitaryOp (without params)
-			 * @param gate_name the gate_name of the UnitaryOp (X-gate, R-gate...)
-			 * @param node_strs a set of strings of node
-			 * @return shared_ptr of UnitaryOp
-			 */
-
-			inline static u_ptr<UnitaryOp> create(const std::string& gate_name, const std::vector<std::string>& node_strs, Component* parent = nullptr){
-				struct impl: UnitaryOp{
-					impl(const std::string& gate_name, const std::vector<std::string>& node_strs, Component* parent) : UnitaryOp(gate_name, node_strs, parent){}
-				};
-				return u_ptr<impl>(new impl(gate_name, node_strs, parent));
-			}
 	};
 
+	//TODO: control gate ( : UnitaryOp)
 	/**
 	 * class for representing generalized control gate
 	 * nodename : control1, control2, ... , control N
 	 * subcomponents : target (UnitaryOp)
 	 */
 
-	//TODO: control gate ( : UnitaryOp)
 	//TODO: measurement-if ( : Component)
+	/**
+	 * class for representing measurement-if operation 
+	 * nodename : 
+	 * subcomponents : measure (Measure), unitary (Unitary)
+	 */
+
+	//TODO: cotainer of the components ( : Component)
+	/**
+	 * class for representing a container of the components
+	 * nodename : 
+	 * subcomponents : [any]
+	 */
+
 	//TODO: const reference of this->nodes?
+	//TODO: should the key of the node be enum rather than string?
 
 	/**
 	 * quantum circuit 

@@ -31,9 +31,6 @@ namespace qlib {
 		"__default_fredkin_",
 	};
 
-	//! dummy qubit
-	DummyQuantumRegister null_qreg;
-
 	//! dummy node
 	Node null_node("dummy");
 
