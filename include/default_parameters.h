@@ -12,7 +12,7 @@
 #include <array>
 
 namespace qlib{
-	/*
+	/**
 	 * enum for representing flags of specific string
 	 */
 
@@ -39,6 +39,8 @@ namespace qlib{
 		SWAP,
 		//! generalized control gate
 		CONTROL,
+		//! measurement-control gate
+		MEASURE_CONTROL,
 		//! the number of default strings
 		NUMSTR,
 	};
@@ -51,8 +53,12 @@ namespace qlib{
 	 */
 
 	struct MeasureStr{
-		//! nodename : measure
-		const static std::string measure;
+		/** nodename : measure
+		 * @return string
+		 */
+		inline const static std::string measure(){
+			return "measure";
+		}
 	};
 
 	/**
@@ -60,8 +66,12 @@ namespace qlib{
 	 */
 
 	struct UnitaryOpStr{
-		//! nodename : s 
-		const static std::string singlenode;
+		/** nodename : singlenode
+		 * @return string
+		 */
+		inline const static std::string singlenode(){
+			return "singlenode";
+		}
 	};
 
 	/**
@@ -69,7 +79,79 @@ namespace qlib{
 	 */
 
 	struct SwapStr{
-		//nodename : swap0, swap1
-		const static std::string swap;
+
+		/** 
+		 * prefix : swap
+		 * @return string
+		 */
+		inline const static std::string swap(){
+			return "swap";
+		}
+
+		/** 
+		 * nodename : swap0
+		 * @return string
+		 */
+		inline const static std::string swap0(){
+			return "swap0";
+		}
+
+		/** 
+		 * nodename : swap1
+		 * @return string
+		 */
+		inline const static std::string swap1(){
+			return "swap1";
+		}
+	};
+
+	/**
+	 * default node string for control gate
+	 */
+
+	struct ControlStr{
+		/** 
+		 * prefix : control
+		 * @return string
+		 */
+		inline const static std::string control(){
+			return "control";
+		}
+
+		/** nodename : target
+		 * @return string
+		 */
+		inline const static std::string target(){
+			return "target";
+		}
+
+		/** nodename : controlx
+		 * @return string
+		 */
+		inline const static std::string control(size_t x){
+			return "control"+std::to_string(x);
+		}
+	};
+
+	/**
+	 * default node string for measure-control gate
+	 */
+
+	struct MeasCtrlStr{
+		/**
+		 * nodename : measure
+		 * @return string
+		 */
+		inline const static std::string measure(){
+			return "measure";
+		}
+
+		/**
+		 * nodename : unitary
+		 * @return string
+		 */
+		inline const static std::string unitary(){
+			return "unitary";
+		}
 	};
 }

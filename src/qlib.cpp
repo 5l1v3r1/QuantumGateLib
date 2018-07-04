@@ -26,15 +26,9 @@ namespace qlib {
 		"__default_r_",
 		"__default_swap_",
 		"__default_ctrl_",
+		"__default_measure_ctrl_",
 	};
 
 	//! dummy node
 	Node null_node("dummy");
-
-	//! nodename : measure
-	const std::string MeasureStr::measure = "measure";
-	//! nodename : singlenode 
-	const std::string UnitaryOpStr::singlenode = "singlenode";
-
-
 } 

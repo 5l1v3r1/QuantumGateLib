@@ -563,6 +563,8 @@ namespace qlib{
 	 * subcomponents : target (UnitaryOp)
 	 */
 
+	//TODO: ControlGate inherits from UnitaryOp
+
 	class ControlGate : public AbstComponentContainer{
 		private:
 			//! friend class UniquePtrFactory, this class can be initialized only through UniquePtrFactory.
@@ -584,24 +586,23 @@ namespace qlib{
 
 	};
 
-	//TODO: measurement-if ( : Component)
+	//TODO: measurement-if ( : AbstComponentContainer)
 	/**
 	 * class for representing measurement-if operation 
 	 * nodename : 
 	 * subcomponents : measure (Measure), unitary (Unitary)
 	 */
 
-	//TODO: cotainer of the components ( : Component)
+	//TODO: cotainer of the components ( : AbstComponentContainer)
 	/**
 	 * class for representing a container of the components
 	 * nodename : 
 	 * subcomponents : [any]
 	 */
 
-	//TODO register container?
+	//TODO quantum register container? ( : Component)
 
 	//TODO: const reference of this->nodes?
-	//TODO: should the key of the node be enum rather than string?
 
 	/**
 	 * quantum circuit 
