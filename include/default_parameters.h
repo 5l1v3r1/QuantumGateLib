@@ -17,6 +17,8 @@ namespace qlib{
 	 */
 
 	enum DefaultString{
+		//! qubit
+		QUBIT,
 		//! measurement
 		MEASURE,
 		//! pauli id
@@ -45,15 +47,69 @@ namespace qlib{
 		NUMSTR,
 	};
 
-	//! default string of measurement
-	extern const std::array<std::string, DefaultString::NUMSTR> default_str;
+	/** 
+	 * default string
+	 * @param str DefaultString enum
+	 * @return corresponding string
+	 */
+	inline const std::string default_str(DefaultString str){
+		switch(str){
+			case DefaultString::QUBIT:
+				return "__default_qubit_";
+			case DefaultString::MEASURE:
+				return "__default_measure_";
+			case DefaultString::Id:
+				return "__default_id_";
+			case DefaultString::X:
+				return "__default_x_";
+			case DefaultString::Y:
+				return "__default_y_";
+			case DefaultString::Z:
+				return "__default_z_";
+			case DefaultString::H:
+				return "__default_h_";
+			case DefaultString::S:
+				return "__default_s_";
+			case DefaultString::T:
+				return "__default_t_";
+			case DefaultString::R:
+				return "__default_r_";
+			case DefaultString::SWAP:
+				return "__default_swap_";
+			case DefaultString::CONTROL:
+				return "__default_ctrl_";
+			case DefaultString::MEASURE_CONTROL:
+				return "__default_measure_ctrl_";
+			default:
+				return "";
+		}
+	}
+
+	
+	 // TODO: enum for Component type?
+
+
+	/**
+	 * default node string for Qubit class
+	 */
+
+	struct QubitStr{
+		/** 
+		 * nodename : qubit
+		 * @return string
+		 */
+		inline const static std::string qubit(){
+			return "qubit";
+		}
+	};
 
 	/**
 	 * default node strings for Measure class
 	 */
 
 	struct MeasureStr{
-		/** nodename : measure
+		/** 
+		 * nodename : measure
 		 * @return string
 		 */
 		inline const static std::string measure(){
@@ -66,7 +122,8 @@ namespace qlib{
 	 */
 
 	struct UnitaryOpStr{
-		/** nodename : singlenode
+		/** 
+		 * nodename : singlenode
 		 * @return string
 		 */
 		inline const static std::string singlenode(){
@@ -118,14 +175,16 @@ namespace qlib{
 			return "control";
 		}
 
-		/** nodename : target
+		/** 
+		 * subcomponent : target
 		 * @return string
 		 */
 		inline const static std::string target(){
 			return "target";
 		}
 
-		/** nodename : controlx
+		/** 
+		 * nodename : controlx
 		 * @return string
 		 */
 		inline const static std::string control(size_t x){
@@ -154,4 +213,9 @@ namespace qlib{
 			return "unitary";
 		}
 	};
+
+	/**
+	 * default node string for container?
+	 */
+
 }

@@ -7,8 +7,8 @@ CXX=clang++
 CC=clang
 #CFLAGS=-Wall -Werror 
 CFLAGS=-Wall 
-#CXXFLAGS=-Wextra -std=c++17 -Wall -g -O0 
-CXXFLAGS=-Wextra -std=c++11 -Wall -O2 
+CXXFLAGS=-Wextra -std=c++17 -Wall -g -O0 
+#CXXFLAGS=-Wextra -std=c++11 -Wall -O2 
 CPPFLAGS=
 #program name
 PROG=build/prog

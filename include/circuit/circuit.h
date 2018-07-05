@@ -29,12 +29,12 @@ namespace qlib{
 	 * quantum register
 	 */
 
-	struct QuantumRegister{
+	struct QuantumBit{
 		//TODO: register num?
 	};
 
 	//! NodeInfo type
-	using NodeInfo = std::pair<const std::string, const QuantumRegister*>;
+	using NodeInfo = std::pair<const std::string, const QuantumBit*>;
 
 	/**
 	 * struct for representing current operation in quantum circuit
@@ -100,7 +100,7 @@ namespace qlib{
 		//! parent
 		Component* parent;
 		//! corresponding	quantum register
-		const QuantumRegister* q_reg;
+		const QuantumBit* q_reg;
 
 		/**
 		 * constructor of Node
@@ -205,8 +205,6 @@ namespace qlib{
 		return !(lhs==rhs);
 	}
 
-	extern Node null_node;
-
 	/**
 	 * struct for representing Component
 	 */
@@ -216,7 +214,7 @@ namespace qlib{
 			//! an identifier
 			const std::string name;
 			//! its parent
-			Component* const parent;
+			Component* parent;
 			//! list of Nodes
 			std::map<std::string, Node> nodes;
 			/**
@@ -294,7 +292,7 @@ namespace qlib{
 			 * @return bool variable which shows if the function succeeds
 			 */
 
-			bool connectNode(const std::string& node_name, Component& target, const std::string& target_node_name, ConnectDir direction){
+			bool connectNode(const std::string& node_name, Component& target, const std::string& target_node_name, ConnectDir direction = ConnectDir::OUT){
 				if(this->getNode(node_name).ptr(direction) != nullptr){
 					// already connected
 					return false;
@@ -328,7 +326,7 @@ namespace qlib{
 				}
 
 				//callback
-				const Node& target_node = this->getAdjNode(node_name, direction);
+				const Node& target_node = *(this->getAdjNode(node_name, direction));
 				Component& target = *(target_node.parent);
 				target.OnRemove(target_node.name, inv(direction));
 
@@ -339,20 +337,14 @@ namespace qlib{
 
 
 			/**
-			 * get the information of the adjacent node
-			 * if the node does not exist, this function returns the reference of "null_node"
+			 * get the pointer of the adjacent node
 			 * @param node_name the name of the node 
 			 * @param direction the direction (IN|OUT)
 			 * @return the derived node
 			 */
 
-			const Node& getAdjNode(const std::string& node_name, ConnectDir direction) const{
-				if(this->getNode(node_name).ptr(direction) == nullptr){
-					// return dummy node
-					return null_node;
-				}
-
-				return *(this->getNode(node_name).ptr(direction));
+			inline const Node* getAdjNode(const std::string& node_name, ConnectDir direction) const{
+				return this->getNode(node_name).ptr(direction);
 			}
 
 			/**
@@ -405,11 +397,73 @@ namespace qlib{
 			 * @return the pointer to its parents (may be nullptr)
 			 */
 
+			inline Component*& getParent(){
+				return this->parent;
+			}
+
+			/**
+			 * get the pointer to its parents (const version)
+			 * if the component has no parent, this function returns nullptr
+			 * @return the pointer to its parents (may be nullptr)
+			 */
+
 			inline Component* getParent() const{
 				return this->parent;
 			}
+
+			/**
+			 * get the const reference of the node map
+			 */
+
+			inline const std::map<std::string, Node>& getNodes() const{
+				return this->nodes;
+			}
 	};
 
+	/**
+	 * class for representing qubit
+	 * nodename: qubit
+	 */
+
+	class Qubit : public Component{
+		private:
+			//! friend class UniquePtrFactory, this class can be initialized only through UniquePtrFactory.
+			friend struct UniquePtrFactory<Qubit>;
+
+			//! quantum bit
+			QuantumBit quantum_bit;
+
+			/**
+			 * constructor of Qubit
+			 * @param quantum_bit an instance of QuantumBit
+			 * @param parent the pointer to its parent
+			 */
+
+			Qubit(const QuantumBit& quantum_bit, Component* parent = nullptr)
+				: Component(default_str(QUBIT), parent), quantum_bit(quantum_bit){
+					//add node "qubit"
+					this->nodes[QubitStr::qubit()] = Node(QubitStr::qubit(), this);
+				}
+
+			/**
+			 * overidden function of OnConnect
+			 * @param node_name the node name to be connected
+			 * @param node node to be added
+			 * @param direction direction IN or OUT of the node. if direction == OUT, this function throws InvalidOperationException.
+			 */
+
+			void OnConnect(const std::string& node_name, Node& node, ConnectDir direction) override{
+				if(direction == ConnectDir::IN){
+					// cannot be connected
+					throw InvalidOperationException("cannot connect Node before Qubit component");
+				}
+
+				Component::OnConnect(node_name, node, direction);
+			}
+
+		public:
+			//TODO: getCurrentOps
+	};
 
 	/**
 	 * class for representing Measurement
@@ -422,20 +476,14 @@ namespace qlib{
 			friend struct UniquePtrFactory<Measure>;
 
 			/**
-			 * nodename ("measure")
-			 */
-
-			const std::string measure;
-
-			/**
 			 * constructor of Measure with previous node
 			 * @param parent the pointer to its parent
 			 */
 
 			Measure(Component* parent = nullptr)
-				: Component(default_str[MEASURE], parent), measure("measure"){
+				: Component(default_str(MEASURE), parent){
 					//add node "measure"
-					this->nodes[measure] = Node(measure, this);
+					this->nodes[MeasureStr::measure()] = Node(MeasureStr::measure(), this);
 				}
 
 			/**
@@ -461,7 +509,7 @@ namespace qlib{
 	 */
 
 	class UnitaryOp : public Component{
-		private:
+		protected:
 			//! friend class UniquePtrFactory, this class can be initialized only through UniquePtrFactory.
 			friend struct UniquePtrFactory<UnitaryOp>;
 
@@ -496,6 +544,17 @@ namespace qlib{
 						this->nodes[elem] = Node(elem, this);
 					}
 				}
+
+			/**
+			 * constructor of UnitaryOp (without params and node_strs)
+			 * @param gate_name the gate_name of the UnitaryOp (X-gate, R-gate...)
+			 * @param parent the pointer to its parent
+			 */
+
+			UnitaryOp(const std::string& gate_name, Component* parent = nullptr)
+				: Component(gate_name, parent){
+				}
+
 		public:
 
 			/**
@@ -523,9 +582,62 @@ namespace qlib{
 	};
 
 	/**
-	 * abstract class of component which has subcomponents
+	 * class for representing generalized control gate
+	 * nodename : control0, control1, ... , control N-1 (N = ctrl_num)
+	 * subcomponents : target (UnitaryOp)
 	 */
 
+	class ControlGate : public UnitaryOp{
+		private:
+			//! friend class UniquePtrFactory, this class can be initialized only through UniquePtrFactory.
+			friend struct UniquePtrFactory<ControlGate>;
+
+			//! target unitary operator
+			u_ptr<UnitaryOp> target_unitary;
+
+			/**
+			 * constructor of ControlGate
+			 * @param ctrl_num the number of control nodes
+			 * @param target_unitary target unitary gate (rvalue reference)
+			 * @param parent the pointer to the parent
+			 */
+
+			ControlGate(size_t ctrl_num, u_ptr<UnitaryOp>&& target_unitary, Component* parent = nullptr)
+				: UnitaryOp(default_str(CONTROL), parent), target_unitary(std::move(target_unitary)){
+					for(size_t i=0; i<ctrl_num; i++){
+						this->nodes[ControlStr::control(i)] = Node(ControlStr::control(i), this);
+					}
+					//set parent of target_unitary
+					this->target_unitary->getParent() = this;
+				}
+
+		public:
+
+			/**
+			 * get the subComponent(children) by name
+			 * this function throws InvalidOperationException if not defined.
+			 * @param component_name the name of subcomponent
+			 * @return the derived component
+			 */
+
+			Component& getSubComponent(const std::string& component_name) const override{
+				if(component_name == ControlStr::target()){
+					return *target_unitary;
+				}
+				else{
+					//otherwise, throw exception
+					throw InvalidOperationException("the subcomponent which does not exist requested.");
+				}
+			}
+
+			//TODO: getCurrentOps
+	};
+
+	/**
+	 * abstract class of component which has subcomponents
+	 * nodename : [none]
+	 * subcomponents : [any]
+	 */
 
 	class AbstComponentContainer : public Component{
 		protected:
@@ -533,7 +645,7 @@ namespace qlib{
 			std::map<std::string, u_ptr<Component>> subcomponents;
 
 			/**
-			 * constructor of ComponentContainer
+			 * constructor of AbstComponentContainer
 			 * @param name identifier name
 			 * @param parent the pointer to the parent
 			 */
@@ -542,6 +654,26 @@ namespace qlib{
 				: Component(name, parent){
 					// add u_ptr<Component> to subcomponents
 				}
+
+			/**
+			 * get subcomponent
+			 * @param component_name the component name
+			 * @return corresponding component
+			 */
+
+			inline Component& getComponent(const std::string& component_name){
+				return *(this->subcomponents.at(component_name));
+			}
+
+			/**
+			 * get subcomponent (const version)
+			 * @param component_name the component name
+			 * @return corresponding component
+			 */
+
+			inline const Component& getComponent(const std::string& component_name) const{
+				return *(this->subcomponents.at(component_name));
+			}
 
 		public:
 
@@ -555,54 +687,282 @@ namespace qlib{
 			Component& getSubComponent(const std::string& component_name) const override{
 				return *(this->subcomponents.at(component_name));
 			}
+
+			//TODO: getCurrentOps
 	};
 
-	/**
-	 * class for representing generalized control gate
-	 * nodename : control0, control1, ... , control N-1 (N = ctrl_num)
-	 * subcomponents : target (UnitaryOp)
-	 */
-
-	//TODO: ControlGate inherits from UnitaryOp
-
-	class ControlGate : public AbstComponentContainer{
-		private:
-			//! friend class UniquePtrFactory, this class can be initialized only through UniquePtrFactory.
-			friend struct UniquePtrFactory<ControlGate>;
-
-			/**
-			 * constructor of CotrolGate
-			 * @param ctrl_num the number of control nodes
-			 * @param target_unitary target unitary gate
-			 * @param parent the pointer to the parent
-			 */
-
-			ControlGate(size_t ctrl_num, u_ptr<UnitaryOp> target_unitary, Component* parent = nullptr)
-			: AbstComponentContainer(default_str[DefaultString::CONTROL], parent){
-				//TODO: add ctrl_num control nodes
-				//TODO: add target unitary operator
-			}
-
-
-	};
-
-	//TODO: measurement-if ( : AbstComponentContainer)
 	/**
 	 * class for representing measurement-if operation 
-	 * nodename : 
+	 * nodename : [none]
 	 * subcomponents : measure (Measure), unitary (Unitary)
 	 */
 
-	//TODO: cotainer of the components ( : AbstComponentContainer)
+	class MeasureCtrl : public AbstComponentContainer{
+		private:
+			//! friend class UniquePtrFactory, this class can be initialized only through UniquePtrFactory.
+			friend struct UniquePtrFactory<MeasureCtrl>;
+
+			/**
+			 * constructor of MeasureCtrl
+			 * @param measure unique_ptr of measurement operator
+			 * @param unitary unique_ptr of the unitary operator
+			 * @param parent the pointer to the parent
+			 */
+
+			MeasureCtrl(u_ptr<Measure>&& measure, u_ptr<UnitaryOp>&& unitary, Component* parent = nullptr)
+				: AbstComponentContainer(default_str(MEASURE_CONTROL), parent){
+					//set measure and target component
+					this->subcomponents[MeasCtrlStr::measure()] = std::move(measure);
+					this->subcomponents[MeasCtrlStr::unitary()] = std::move(unitary);
+					// set parents
+					this->getComponent(MeasCtrlStr::measure()).getParent() = this;
+					this->getComponent(MeasCtrlStr::unitary()).getParent() = this;
+				}
+	};
+
 	/**
 	 * class for representing a container of the components
-	 * nodename : 
+	 * nodename : [none]
 	 * subcomponents : [any]
 	 */
 
-	//TODO quantum register container? ( : Component)
+	//class ComponentContainer : public AbstComponentContainer{
+	//	private:
+	//		//! friend class UniquePtrFactory, this class can be initialized only through UniquePtrFactory.
+	//		friend struct UniquePtrFactory<ComponentContainer>;
 
-	//TODO: const reference of this->nodes?
+	//		//TODO: how to make the constructor of the ComponentContainer?
+
+	//	public:
+	//};
+
+
+	/**
+	 * components factory
+	 */
+
+	struct Op{
+
+		/**
+		 * qubit factory
+		 * @param quantum_bit QuantumBit instance
+		 * @param parent the parent of the component 
+		 * @return unique_ptr of Qubit class
+		 */
+
+		inline static u_ptr<Qubit> Q(const QuantumBit& quantum_bit, Component* parent = nullptr){
+			return UniquePtrFactory<Qubit>::create(quantum_bit, parent);
+		}
+
+		/**
+		 * measurement operator factory
+		 * @param parent the parent of the component 
+		 * @return unique_ptr of Measure class
+		 */
+
+		inline static u_ptr<Measure> M(Component* parent = nullptr){
+			return UniquePtrFactory<Measure>::create(parent);
+		}
+
+		/**
+		 * unitary operator factory
+		 * @param gate_name the gate_name of the UnitaryOp (X-gate, R-gate...)
+		 * @param params a vector of double parameters
+		 * @param node_strs a set of strings of node
+		 * @param parent the parent of the component 
+		 * @return unique_ptr of UnitaryOp class
+		 */
+
+		inline static u_ptr<UnitaryOp> U(const std::string& gate_name, const std::vector<double>& params, const std::vector<std::string>& node_strs, Component* parent = nullptr){
+			return UniquePtrFactory<UnitaryOp>::create(gate_name, params, node_strs, parent);
+		}
+
+		/**
+		 * unitary operator factory (without params)
+		 * @param gate_name the gate_name of the UnitaryOp (X-gate, R-gate...)
+		 * @param node_strs a set of strings of node
+		 * @param parent the parent of the component 
+		 * @return unique_ptr of UnitaryOp class
+		 */
+
+		inline static u_ptr<UnitaryOp> U(const std::string& gate_name, const std::vector<std::string>& node_strs, Component* parent = nullptr){
+			return UniquePtrFactory<UnitaryOp>::create(gate_name, node_strs, parent);
+		}
+
+		/**
+		 * generalized control gate factory 
+		 * @param ctrl_num the number of control nodes
+		 * @param target_unitary target unitary gate (rvalue reference)
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of ControlGate class
+		 */
+
+		inline static u_ptr<ControlGate> Ctrl(size_t ctrl_num, u_ptr<UnitaryOp>&& target, Component* parent = nullptr){
+			return UniquePtrFactory<ControlGate>::create(ctrl_num, std::move(target), parent);
+		}
+
+		/**
+		 * measurement-control component factory
+		 * @param unitary unique_ptr of the unitary operator
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of MeasureCtrl class
+		 */
+
+		inline static u_ptr<MeasureCtrl> MCtrl(u_ptr<UnitaryOp>&& unitary, Component* parent = nullptr){
+			return UniquePtrFactory<MeasureCtrl>::create(Op::M(), std::move(unitary), parent);
+		}
+
+		/**
+		 * generate Id gate
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of Id gate
+		 */
+
+		inline static u_ptr<UnitaryOp> Id(Component* parent = nullptr){
+			return Op::U(default_str(DefaultString::Id), std::vector<std::string>({UnitaryOpStr::singlenode()}), parent);
+		}
+
+		/**
+		 * generate X gate
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of X gate
+		 */
+
+		inline static u_ptr<UnitaryOp> X(Component* parent = nullptr){
+			return Op::U(default_str(DefaultString::X), std::vector<std::string>({UnitaryOpStr::singlenode()}), parent);
+		}
+
+		/**
+		 * generate Y gate
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of Y gate
+		 */
+
+		inline static u_ptr<UnitaryOp> Y(Component* parent = nullptr){
+			return Op::U(default_str(DefaultString::Y), std::vector<std::string>({UnitaryOpStr::singlenode()}), parent);
+		}
+
+		/**
+		 * generate Z gate
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of Z gate
+		 */
+
+		inline static u_ptr<UnitaryOp> Z(Component* parent = nullptr){
+			return Op::U(default_str(DefaultString::Z), std::vector<std::string>({UnitaryOpStr::singlenode()}), parent);
+		}
+
+		/**
+		 * generate H (hadamard) gate
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of H gate
+		 */
+
+		inline static u_ptr<UnitaryOp> H(Component* parent = nullptr){
+			return Op::U(default_str(DefaultString::H), std::vector<std::string>({UnitaryOpStr::singlenode()}), parent);
+		}
+
+		/**
+		 * generate S (phase) gate
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of S gate
+		 */
+
+		inline static u_ptr<UnitaryOp> S(Component* parent = nullptr){
+			return Op::U(default_str(DefaultString::S), std::vector<std::string>({UnitaryOpStr::singlenode()}), parent);
+		}
+		/**
+		 * generate T (pi/8) gate
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of T gate
+		 */
+
+		inline static u_ptr<UnitaryOp> T(Component* parent = nullptr){
+			return Op::U(default_str(DefaultString::T), std::vector<std::string>({UnitaryOpStr::singlenode()}), parent);
+		}
+
+		/**
+		 * generate CNOT gate
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of CNOT gate
+		 */
+
+		inline static u_ptr<ControlGate> CNOT(Component* parent = nullptr){
+			return Op::Ctrl(1, Op::X(), parent);
+		}
+
+		/**
+		 * generate SWAP gate
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of SWAP gate
+		 */
+
+		inline static u_ptr<UnitaryOp> SWAP(Component* parent = nullptr){
+			return Op::U(default_str(DefaultString::SWAP), std::vector<std::string>({SwapStr::swap0(), SwapStr::swap1()}), parent);
+		}
+
+		/**
+		 * generate CZ gate
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of CZ gate
+		 */
+
+		inline static u_ptr<ControlGate> CZ(Component* parent = nullptr){
+			return Op::Ctrl(1, Op::Z(), parent);
+		}
+
+		/**
+		 * generate CS gate
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of CS gate
+		 */
+
+		inline static u_ptr<ControlGate> CS(Component* parent = nullptr){
+			return Op::Ctrl(1, Op::S(), parent);
+		}
+
+		/**
+		 * generate TOFFOLI (CCNOT) gate
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of TOFFOLI gate
+		 */
+
+		inline static u_ptr<ControlGate> TOFFOLI(Component* parent = nullptr){
+			return Op::Ctrl(2, Op::X(), parent);
+		}
+
+		/**
+		 * generate FREDKIN (CSWAP) gate
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of FREDKIN gate
+		 */
+
+		inline static u_ptr<ControlGate> FREDKIN(Component* parent = nullptr){
+			return Op::Ctrl(1, Op::SWAP(), parent);
+		}
+
+		/**
+		 * generate R (phase-shift) gate with parameter
+		 * @param phi phase parameter
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of R gate
+		 */
+
+		inline static u_ptr<UnitaryOp> R(double phi, Component* parent = nullptr){
+			return Op::U(default_str(DefaultString::R), std::vector<double>({phi}), std::vector<std::string>({UnitaryOpStr::singlenode()}), parent);
+		}
+
+		/**
+		 * generate CR (controlled phase-shift) gate with parameter
+		 * @param phi phase parameter
+		 * @param parent the pointer to the parent
+		 * @return unique_ptr of CR gate
+		 */
+
+		inline static u_ptr<ControlGate> CR(double phi, Component* parent = nullptr){
+			return Op::Ctrl(1, Op::R(phi), parent);
+		}
+	};
 
 	/**
 	 * quantum circuit 
@@ -622,4 +982,3 @@ namespace qlib{
 //inline qlib::Circuit& operator<<(qlib::Circuit& circuit, qlib::_ptr<qlib::Component> component){
 //	return circuit.addComponent(component);
 //}
-
