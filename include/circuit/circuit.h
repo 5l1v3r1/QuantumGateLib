@@ -982,3 +982,9 @@ namespace qlib{
 //inline qlib::Circuit& operator<<(qlib::Circuit& circuit, qlib::_ptr<qlib::Component> component){
 //	return circuit.addComponent(component);
 //}
+//
+//TODO: implement no_connect Node
+//TODO: test connectNode
+//TODO: separate component.h and circuit.h
+//TODO: componentcontainer, unitarycontainer
+//TODO: operator<< in class Circuit
